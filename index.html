@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Morse Code Decoder</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#111;color:#eee;margin:0 auto;padding:16px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));max-width:760px;-webkit-text-size-adjust:100%}
+h1{font-size:1.4rem;margin:.2em 0 .5em}h2{font-size:1.05rem;margin:0 0 8px}
+button,.filebtn{font-size:1.1rem;min-height:54px;padding:12px 20px;border:0;border-radius:12px;color:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.3);font-family:inherit;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+button:active,.filebtn:active{transform:scale(.97);filter:brightness(1.3)}
+button:disabled{opacity:.4;cursor:default;transform:none;filter:none}
+#row{display:flex;gap:10px;flex-wrap:wrap}
+#start{background:#2b7cff;flex:2 1 180px}#stop{background:#c0392b;flex:1 1 90px}#clear{background:#444;flex:1 1 90px}
+#start.live{background:#1e9e4a}
+.filebtn{background:#6b4de0;width:100%}
+#status{margin:10px 0;padding:12px 14px;border-radius:10px;background:#222;border-left:6px solid #666;font-size:1rem;line-height:1.35}
+#status.ok{border-color:#1e9e4a;background:#14291b}#status.warn{border-color:#e0a800;background:#2c2510}#status.err{border-color:#e74c3c;background:#2f1613}
+#envnote{display:none;margin:10px 0;padding:12px 14px;border-radius:10px;background:#2c2510;border-left:6px solid #e0a800;line-height:1.4}
+.box{background:#1c1c1c;border-radius:12px;padding:14px;margin-top:14px}
+#text{font-size:1.8rem;letter-spacing:2px;min-height:2.6rem;word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap}
+#code{font-family:ui-monospace,Menlo,monospace;font-size:1.05rem;color:#9ad;min-height:1.4rem;word-wrap:break-word;overflow-wrap:anywhere;margin-top:8px}
+.placeholder{color:#777}
+label{display:block;margin:12px 0 4px;font-size:.95rem;color:#bbb}
+input[type=range]{width:100%;height:32px}
+.chk{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:1rem;color:#ddd}.chk input{width:22px;height:22px}
+#meter{height:16px;background:#333;border-radius:8px;overflow:hidden;margin-top:6px}#bar{height:100%;width:0;background:#2b7cff}
+#led{display:inline-block;width:18px;height:18px;border-radius:50%;background:#333;vertical-align:middle;margin-left:8px}
+#info{font-size:.95rem;color:#aaa;margin-top:8px}
+small,.hint{color:#999;font-size:.88rem;line-height:1.35}
+input[type=file]{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+progress{width:100%;height:12px;margin-top:10px;display:none}
+details summary{font-size:1rem;padding:10px 0;cursor:pointer}
+</style></head><body>
+<h1>Morse Code Decoder <span id="led" title="lit while a beep is heard"></span></h1>
+<noscript><div style="padding:12px;background:#2f1613;border-left:6px solid #e74c3c;border-radius:10px">JavaScript is turned off or blocked here, so nothing on this page can work. Open this page in Safari, Chrome or Edge.</div></noscript>
+
+<div id="status" class="warn" role="status" aria-live="polite">Loading&hellip; if this message never changes, scripts are blocked in this viewer. Open the page in Safari, Chrome or Edge.</div>
+<div id="envnote"></div>
+
+<div id="row">
+<button id="start" type="button">&#127908; Start listening</button>
+<button id="stop" type="button" disabled>Stop</button>
+<button id="clear" type="button">Clear</button>
+</div>
+
+<div class="box"><div id="text" aria-live="polite"></div><div id="code"></div></div>
+
+<div class="box">
+<h2>Decode a recording instead</h2>
+<label class="filebtn" for="file" id="filelbl" role="button">&#128193; Choose audio / video file&hellip;</label>
+<input id="file" type="file" accept="audio/*,video/*,.m4a,.aac,.mp3,.wav,.caf,.aif,.aiff,.mov,.mp4,.m4v,.3gp,.ogg,.oga,.opus,.webm,.flac">
+<progress id="prog" max="100" value="0"></progress>
+<p class="hint">Works with iPhone Voice Memos (.m4a), screen recordings (.mov/.mp4), WAV, MP3 and most other audio or video files. This works even where live microphone access is blocked.</p>
+</div>
+
+<div class="box">
+<h2>Live signal</h2>
+<div>Level <span id="lvlv"></span></div><div id="meter"><div id="bar"></div></div>
+<div id="info">Tone: <b id="fdisp">&ndash;</b> &nbsp; Speed: <b id="wdisp">&ndash;</b></div>
+<details><summary>Settings</summary>
+<label class="chk"><input type="checkbox" id="autof" checked> Auto-detect tone pitch</label>
+<label for="freq">Tone pitch: <span id="fv"></span></label><input id="freq" type="range" min="300" max="2000" step="10" value="700" disabled>
+<label class="chk"><input type="checkbox" id="autow" checked> Auto-detect speed</label>
+<label for="wpm">Speed: <span id="wv"></span></label><input id="wpm" type="range" min="5" max="40" step="1" value="15" disabled>
+<label for="sens">Noise rejection (minimum beep-to-background ratio): <span id="sv"></span></label><input id="sens" type="range" min="1.5" max="8" step="0.5" value="2.5">
+<small>Raise this if noise creates false letters. Lower it if quiet beeps are missed.</small>
+</details>
+<p class="hint">Tips: hold the beeping source close to the microphone and keep other noise down.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);};
+var statusEl=$('status');
+function setStatus(msg,cls){statusEl.textContent=msg;statusEl.className=cls||'';}
+window.addEventListener('error',function(e){setStatus('Script error: '+(e.message||e)+'. Please tell the page author.','err');});
+window.addEventListener('unhandledrejection',function(e){setStatus('Error: '+((e.reason&&e.reason.message)||e.reason),'err');});
+
+var M={'.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J','-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T','..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z','-----':'0','.----':'1','..---':'2','...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9','.-.-.-':'.','--..--':',','..--..':'?','-..-.':'/','-....-':'-','-.--.':'(','-.--.-':')','.--.-.':'@','-...-':'=','.-.-.':'+','---...':':','.----.':"'",'.-..-.':'"','-.-.--':'!','...-.-':'<SK>','.-...':'&'};
+
+/* ---------- Tone analyser: sample stream -> tone on/off intervals ---------- */
+var FMIN=300,FMAX=1500,FSTEP=25;
+function Core(sr,cfg){
+  this.sr=sr;this.cfg=cfg;
+  this.W=Math.round(sr*0.02);this.H=Math.round(sr*0.005);
+  this.tail=new Float32Array(0);this.nframes=0;this.hp=[0,0];
+  this.frozenText='';this.frozenCode='';this.seg=[];
+  this.on=false;this.onStart=0;this.hi=0;this.lo=0;this.init=false;this.fEst=0;this.lastA=0;this.lastDash=0.2;this.u=0.08;
+  this.bankKey='';this.buildBank();
+}
+Core.prototype.buildBank=function(){
+  var fixed=this.cfg.freq(); var key=fixed?('f'+fixed):'auto'; if(key===this.bankKey)return; this.bankKey=key;
+  var fr=[];if(fixed){fr=[fixed];}else{for(var f=FMIN;f<=FMAX;f+=FSTEP)fr.push(f);}
+  var W=this.W,w=new Float32Array(W),sw=0,i,k;
+  for(i=0;i<W;i++){w[i]=0.5-0.5*Math.cos(2*Math.PI*i/(W-1));sw+=w[i];}
+  this.norm=2/sw;this.freqs=fr;this.C=[];this.S=[];
+  for(k=0;k<fr.length;k++){var c=new Float32Array(W),s=new Float32Array(W);
+    for(i=0;i<W;i++){var a=2*Math.PI*fr[k]*i/this.sr;c[i]=w[i]*Math.cos(a);s[i]=w[i]*Math.sin(a);}
+    this.C.push(c);this.S.push(s);}
+};
+Core.prototype.push=function(x){
+  // 1st-order DC/rumble high-pass, then append to the carry-over buffer
+  var n=x.length,y=new Float32Array(this.tail.length+n);y.set(this.tail,0);
+  var px=this.hp[0],py=this.hp[1],o=this.tail.length,i;
+  for(i=0;i<n;i++){var v=x[i];py=v-px+0.995*py;px=v;y[o+i]=py;}
+  this.hp=[px,py];
+  this.buildBank();
+  var W=this.W,H=this.H,pos=0,nf=this.freqs.length;
+  while(pos+W<=y.length){
+    var best=0,bi=0;
+    for(var k=0;k<nf;k++){var c=this.C[k],s=this.S[k],re=0,im=0;
+      for(i=0;i<W;i++){var v2=y[pos+i];re+=v2*c[i];im+=v2*s[i];}
+      var A=Math.sqrt(re*re+im*im)*this.norm; if(A>best){best=A;bi=k;} }
+    var t=(this.nframes*H+W/2)/this.sr;
+    this.frame(best,this.freqs[bi],t);
+    this.nframes++;pos+=H;
+  }
+  this.tail=y.slice(pos);
+};
+Core.prototype.frame=function(A,f,t){
+  var dt=this.H/this.sr;this.t=t;this.lastA=A;
+  if(!this.init){this.hi=A;this.lo=A;this.init=true;}
+  this.hi=Math.max(A,this.hi*Math.exp(-0.7*dt));          // fast attack, ~6 dB/s decay
+  var warm=this.nframes*dt<0.2;
+  if(warm){this.lo+=(A-this.lo)*(1-Math.exp(-30*dt));}
+  else if(!this.on){this.lo+=(A-this.lo)*(1-Math.exp(-(A<this.lo?2:(A<1.6*this.lo?1:0.1))*dt));}   // background floor: smoothed average of non-beep frames
+  var ratio=this.cfg.contrast();
+  var valid=this.hi>2e-4&&this.hi>=ratio*Math.max(this.lo,1e-7);
+  var thr=this.lo+0.5*(this.hi-this.lo);                  // half-amplitude crossing keeps beep lengths true
+  var hy=0.06*(this.hi-this.lo);
+  var sig=!warm&&valid&&(this.on?A>thr-hy:A>thr+hy);
+  if(this.on&&t-this.onStart>3){this.on=false;this.lo=A;this.hi=A;sig=false;}   // a 'beep' longer than 3 s is a steady noise, not Morse
+  if(sig){ this.fEst=this.fEst?this.fEst*0.9+f*0.1:f; }
+  if(sig&&!this.on){
+    this.on=true;this.onStart=t;
+    var s=this.seg,l=s[s.length-1];
+    if(l&&t-l[1]<0.012){this.onStart=l[0];s.pop();}       // bridge sub-12 ms dropouts
+  } else if(!sig&&this.on){
+    this.on=false; if(t-this.onStart>=0.018)this.seg.push([this.onStart,t]);
+  }
+  this.maybeFreeze(t);
+};
+Core.prototype.estimate=function(tones){
+  var wpm=this.cfg.wpm(),n=tones.length,u;
+  if(wpm){u=1.2/wpm;return {u:u,dashT:2*u};}
+  if(n===0)return {u:0.08,dashT:0.16};
+  var d=[],i;for(i=0;i<n;i++)d.push(tones[i][1]-tones[i][0]);
+  if(n===1){return d[0]<0.15?{u:d[0],dashT:0.15}:{u:Math.max(0.02,d[0]/3),dashT:0.15};}
+  var L=d.map(Math.log).sort(function(a,b){return a-b;}),P=[0],Q=[0];
+  for(i=0;i<n;i++){P.push(P[i]+L[i]);Q.push(Q[i]+L[i]*L[i]);}
+  var bk=-1,bs=1e18;
+  for(var k=1;k<n;k++){
+    var m1=P[k]/k,m2=(P[n]-P[k])/(n-k),s1=Q[k]-k*m1*m1,s2=(Q[n]-Q[k])-(n-k)*m2*m2;
+    if(s1+s2<bs){bs=s1+s2;bk=k;}
+  }
+  var g1=Math.exp(P[bk]/bk),g2=Math.exp((P[n]-P[bk])/(n-bk));
+  if(g2/g1>=1.8){u=(g1+g2/3)/2;return {u:u,dashT:Math.sqrt(g1*g2)};}
+  var med=Math.exp(P[n]/n);
+  if(med<0.15)return {u:med,dashT:2*med};
+  return {u:med/3,dashT:med*0.6};
+};
+Core.prototype.decode=function(tones,now,final){
+  var est=this.estimate(tones),u=est.u,cg=2*u,wg=5*u,txt='',code='',cur='',n=tones.length;
+  for(var i=0;i<n;i++){
+    cur+=(tones[i][1]-tones[i][0])>est.dashT?'-':'.';
+    var last=(i+1===n),gap=last?(now-tones[i][1]):(tones[i+1][0]-tones[i][1]);
+    if(!last&&gap<=cg)continue;
+    if(last&&!final&&gap<=cg){code+=cur;break;}
+    txt+=(M[cur]||'?');code+=cur+' ';cur='';
+    if(gap>wg&&!(last&&final)){txt+=' ';code+='/ ';}
+  }
+  this.u=u;this.lastDash=est.dashT;
+  return {text:txt,code:code,u:u};
+};
+Core.prototype.freeze=function(final,upto){
+  var s=this.seg,part=upto?s.slice(0,upto):s;
+  if(!part.length)return;
+  var now=upto?s[upto][0]:1e9;
+  var r=this.decode(part,final?part[part.length-1][1]+999:now,true);
+  this.frozenText+=r.text+(final?' ':'');this.frozenCode+=r.code+(final?'/ ':'');
+  this.seg=upto?s.slice(upto):[];
+};
+Core.prototype.maybeFreeze=function(t){
+  var s=this.seg;if(!s.length||this.on)return;
+  if(t-s[s.length-1][1]>4){this.freeze(true);return;}
+  if(s.length>300){var est=this.estimate(s),cut=0;
+    for(var i=240;i>0;i--){if(s[i][0]-s[i-1][1]>2*est.u){cut=i;break;}}
+    this.freeze(false,cut||240);}
+};
+Core.prototype.view=function(){
+  var r=this.decode(this.seg,this.t||0,false);
+  return {text:this.frozenText+r.text,code:this.frozenCode+r.code,u:r.u};
+};
+Core.prototype.finish=function(){
+  if(this.on){this.on=false;if(this.t-this.onStart>=0.018)this.seg.push([this.onStart,this.t]);}
+  this.freeze(false);
+  return {text:this.frozenText.replace(/\s+$/,''),code:this.frozenCode.replace(/[\s\/]+$/,'')};
+};
+
+/* ---------- UI + live microphone ---------- */
+var cfg={
+  freq:function(){return $('autof').checked?0:+$('freq').value;},
+  wpm:function(){return $('autow').checked?0:+$('wpm').value;},
+  contrast:function(){return +$('sens').value;}
+};
+var core=null,ctx=null,stream=null,proc=null,src=null,mute=null,timer=null,listening=false,starting=false,busyFile=false,lastShown='';
+var textEl=$('text'),codeEl=$('code');
+function lbl(){
+  $('fv').textContent=$('freq').value+' Hz';$('wv').textContent=$('wpm').value+' WPM';$('sv').textContent=$('sens').value+'x';
+  $('freq').disabled=$('autof').checked;$('wpm').disabled=$('autow').checked;
+}
+['autof','autow','freq','wpm','sens'].forEach(function(id){$(id).addEventListener('input',lbl);$(id).addEventListener('change',lbl);});lbl();
+function show(v){
+  var s=v.text,c=v.code;
+  if(s+'|'+c===lastShown)return;lastShown=s+'|'+c;
+  textEl.textContent=s;codeEl.textContent=c;
+}
+function updateMeter(){
+  if(!core)return;
+  var A=core.lastA,db=20*Math.log10(A+1e-9),p=Math.max(0,Math.min(100,(db+80)*1.25));
+  $('bar').style.width=p+'%';$('lvlv').textContent=db>-79?Math.round(db)+' dBFS':'(silent)';
+  $('led').style.background=core.on?'#2b7cff':'#333';
+  if(core.fEst)$('fdisp').textContent=Math.round(core.fEst)+' Hz';
+  var v=core.u?Math.round(1.2/core.u):0;$('wdisp').textContent=(v>=3&&v<=80)?('~'+v+' WPM'):'–';
+}
+function buttons(){
+  $('start').disabled=listening||starting;$('stop').disabled=!listening;
+  $('start').classList.toggle('live',listening);
+  $('start').innerHTML=listening?'&#127908; Listening&hellip;':(starting?'Starting&hellip;':'&#127908; Start listening');
+}
+function micErrorMessage(e){
+  var n=(e&&e.name)||'',m=(e&&e.message)||String(e);
+  if(n==='NotAllowedError'||n==='PermissionDeniedError'||n==='SecurityError')
+    return 'Microphone permission was denied or blocked ('+n+'). On iPhone: tap the "aA" button in Safari\'s address bar, choose Website Settings, set Microphone to Allow, then reload and tap Start again. If this page is inside an app preview or was opened from a downloaded file, open the https:// link in Safari instead. You can still use "Decode a recording" below.';
+  if(n==='NotFoundError'||n==='DevicesNotFoundError')return 'No microphone was found on this device.';
+  if(n==='NotReadableError'||n==='TrackStartError')return 'The microphone is busy or unavailable (another app may be using it). Close other apps using the mic and try again.';
+  return 'Could not start the microphone: '+n+' '+m;
+}
+function micUnavailableReason(){
+  var secure=(window.isSecureContext!==false);
+  return 'Live microphone access is not available in this viewer'+(secure?'':' because this page is not on a secure (https://) address')+'. This happens when the page is opened from a downloaded file, an in-app preview, a sandboxed frame, or an http:// address. Open the https:// version of this page directly in Safari (iPhone) or Chrome/Edge/Safari (computer). Meanwhile you can use "Decode a recording" below, which does not need the microphone.';
+}
+function safeResume(){try{if(ctx&&ctx.resume){var r=ctx.resume();if(r&&r.catch)r.catch(function(){});}}catch(e){}}
+function hasGUM(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);}
+function AC(){return window.AudioContext||window.webkitAudioContext;}
+
+function startListening(){
+  if(listening||starting||busyFile)return;
+  if(!hasGUM()){setStatus(micUnavailableReason(),'err');return;}
+  var Ctor=AC();if(!Ctor){setStatus('This browser has no Web Audio support, so it cannot analyse sound. Use a current Safari, Chrome or Edge.','err');return;}
+  starting=true;buttons();setStatus('Asking for microphone permission… tap Allow if your browser asks.','warn');
+  try{ // must be created/resumed inside the tap handler for iOS Safari
+    ctx=new Ctor();safeResume();
+  }catch(e){starting=false;buttons();setStatus('Could not start audio: '+e.message,'err');return;}
+  var prev=core?core.view():null;
+  core=new Core(ctx.sampleRate,cfg);lastShown='';
+  if(prev){core.frozenText=prev.text?(prev.text.replace(/\s*$/,' ')):'';core.frozenCode=prev.code?(prev.code+'/ '):'';}
+  var constraints={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+  var gp=navigator.mediaDevices.getUserMedia(constraints).catch(function(e){
+    if(e&&e.name==='OverconstrainedError')return navigator.mediaDevices.getUserMedia({audio:true});
+    throw e;
+  });
+  gp.then(function(s){
+    stream=s;
+    safeResume();
+    src=ctx.createMediaStreamSource(stream);
+    if(!ctx.createScriptProcessor)throw new Error('createScriptProcessor is not available');
+    proc=ctx.createScriptProcessor(4096,1,1);
+    proc.onaudioprocess=function(ev){var inp=ev.inputBuffer.getChannelData(0);core.push(new Float32Array(inp));};
+    mute=ctx.createGain();mute.gain.value=0;
+    src.connect(proc);proc.connect(mute);mute.connect(ctx.destination);
+    ctx.onstatechange=function(){if(listening&&ctx.state!=='running'){setStatus('Audio was paused by the system (state: '+ctx.state+'). Tap Stop, then Start listening again.','warn');safeResume();}};
+    listening=true;starting=false;buttons();
+    timer=setInterval(function(){if(core){show(core.view());updateMeter();}},100);
+    setStatus('Listening at '+ctx.sampleRate+' Hz. Play or send Morse beeps near the microphone.','ok');
+  }).catch(function(e){
+    starting=false;listening=false;buttons();cleanup();
+    setStatus(micErrorMessage(e),'err');
+  });
+}
+function cleanup(){
+  if(timer){clearInterval(timer);timer=null;}
+  try{if(proc){proc.onaudioprocess=null;proc.disconnect();}}catch(e){}
+  try{if(src)src.disconnect();}catch(e){}
+  try{if(mute)mute.disconnect();}catch(e){}
+  try{if(stream)stream.getTracks().forEach(function(t){t.stop();});}catch(e){}
+  try{if(ctx&&ctx.close)ctx.close();}catch(e){}
+  proc=src=mute=stream=null;
+}
+function stopListening(){
+  if(!listening)return;
+  listening=false;
+  var c=core;cleanup();
+  if(c){var r=c.finish();show({text:r.text,code:r.code});c.on=false;updateMeter();}
+  $('led').style.background='#333';buttons();
+  setStatus('Stopped. The microphone is off. Tap Start listening to continue, or Clear to erase the text.','');
+}
+function clearAll(){
+  if(core){core.frozenText='';core.frozenCode='';core.seg=[];}
+  lastShown='';textEl.textContent='';codeEl.textContent='';
+  setStatus(listening?'Cleared. Still listening…':'Cleared.',listening?'ok':'');
+}
+$('start').addEventListener('click',startListening);
+$('stop').addEventListener('click',stopListening);
+$('clear').addEventListener('click',clearAll);
+
+/* ---------- Decode a recorded file (no microphone needed) ---------- */
+function parseWav(ab){   // plain RIFF/WAVE reader: works even if the browser's decodeAudioData is missing or stalls
+  var dv=new DataView(ab);if(ab.byteLength<44||dv.getUint32(0,false)!==0x52494646||dv.getUint32(8,false)!==0x57415645)return null;
+  var pos=12,fmt=null,dataPos=-1,dataLen=0;
+  while(pos+8<=ab.byteLength){
+    var id=dv.getUint32(pos,false),len=dv.getUint32(pos+4,true);
+    if(id===0x666d7420){fmt={tag:dv.getUint16(pos+8,true),ch:dv.getUint16(pos+10,true),sr:dv.getUint32(pos+12,true),bits:dv.getUint16(pos+22,true)};
+      if(fmt.tag===0xFFFE&&len>=26)fmt.tag=dv.getUint16(pos+32,true);}
+    else if(id===0x64617461){dataPos=pos+8;dataLen=Math.min(len,ab.byteLength-dataPos);break;}
+    pos+=8+len+(len&1);
+  }
+  if(!fmt||dataPos<0||!fmt.ch||!fmt.sr)return null;
+  var bps=fmt.bits/8,frames=Math.floor(dataLen/(bps*fmt.ch)),x=new Float32Array(frames),i,c;
+  if(!((fmt.tag===1&&(bps===1||bps===2||bps===3||bps===4))||(fmt.tag===3&&bps===4)))return null;
+  for(i=0;i<frames;i++){var acc=0;
+    for(c=0;c<fmt.ch;c++){var o=dataPos+(i*fmt.ch+c)*bps,v;
+      if(fmt.tag===3)v=dv.getFloat32(o,true);
+      else if(bps===1)v=(dv.getUint8(o)-128)/128;
+      else if(bps===2)v=dv.getInt16(o,true)/32768;
+      else if(bps===3){var t=dv.getUint8(o)|(dv.getUint8(o+1)<<8)|(dv.getUint8(o+2)<<16);if(t&0x800000)t-=0x1000000;v=t/8388608;}
+      else v=dv.getInt32(o,true)/2147483648;
+      acc+=v;}
+    x[i]=acc/fmt.ch;}
+  return {x:x,sr:fmt.sr,how:'built-in WAV reader'};
+}
+function decodeBuffer(ab){
+  var w=null;try{w=parseWav(ab);}catch(e){w=null;}
+  if(w)return Promise.resolve(w);
+  return new Promise(function(resolve,reject){
+    var O=window.OfflineAudioContext||window.webkitOfflineAudioContext,c;
+    try{c=O?new O(1,1,44100):new (AC())();}catch(e){try{c=new (AC())();}catch(e2){reject(e2);return;}}
+    var done=false,tm=setTimeout(function(){bad(new Error('this browser did not finish decoding the file (it may not support this format)'));},45000);
+    function ok(b){if(!done){done=true;clearTimeout(tm);resolve({x:monoOf(b),sr:b.sampleRate,how:'browser audio decoder'});}}
+    function bad(e){if(!done){done=true;clearTimeout(tm);reject(e||new Error('This file could not be decoded'));}}
+    try{var p=c.decodeAudioData(ab,ok,bad);if(p&&p.then)p.then(ok,bad);}catch(e){bad(e);}   // callback form for older Safari, promise form for new ones
+  });
+}
+function monoOf(buf){
+  var n=buf.length,ch=buf.numberOfChannels,out=new Float32Array(n),c,i;
+  for(c=0;c<ch;c++){var d=buf.getChannelData(c);for(i=0;i<n;i++)out[i]+=d[i]/ch;}
+  return out;
+}
+function readFile(f){
+  return new Promise(function(res,rej){
+    if(f.arrayBuffer){f.arrayBuffer().then(res,rej);return;}
+    var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){rej(r.error||new Error('Could not read the file'));};r.readAsArrayBuffer(f);
+  });
+}
+function handleFile(f){
+  if(!f)return;
+  if(busyFile)return;
+  if(listening){setStatus('Tap Stop first, then choose a file.','warn');return;}
+  busyFile=true;$('start').disabled=true;var how='';
+  var prog=$('prog');prog.style.display='block';prog.value=0;
+  setStatus('Reading "'+f.name+'" ('+Math.round(f.size/1024)+' KB)…','warn');
+  readFile(f).then(function(ab){
+    setStatus('Decoding audio from "'+f.name+'"…','warn');
+    return decodeBuffer(ab);
+  }).then(function(dec){
+    var x=dec.x,sr=dec.sr;if(!x||!x.length)throw new Error('the file contains no audio');
+    var k=new Core(sr,cfg),CH=sr*2,pos=0;how=dec.how;
+    core=k;lastShown='';
+    return new Promise(function(resolve){
+      (function step(){
+        var end=Math.min(x.length,pos+CH);k.push(x.subarray(pos,end));pos=end;prog.value=100*pos/x.length;
+        if(pos<x.length){setTimeout(step,0);}
+        else{k.push(new Float32Array(Math.round(sr*3)));resolve({k:k,dur:x.length/sr,sr:sr});}   // 3 s of silence so the last letter is closed
+      })();
+    });
+  }).then(function(r){
+    var out=r.k.finish();show({text:out.text,code:out.code});updateMeter();
+    $('led').style.background='#333';
+    if(!out.text)setStatus('Finished "'+f.name+'" ('+r.dur.toFixed(1)+' s) but no Morse beeps were found. Try lowering "Noise rejection" in Settings.','warn');
+    else setStatus('Decoded "'+f.name+'" ('+r.dur.toFixed(1)+' s at '+r.sr+' Hz, via '+how+').','ok');
+  }).catch(function(e){
+    setStatus('Could not decode "'+f.name+'": '+((e&&e.message)||'unsupported or damaged audio')+'. Try a .m4a, .wav or .mp3 recording.','err');
+  }).then(function(){busyFile=false;prog.style.display='none';buttons();$('file').value='';});
+}
+$('file').addEventListener('change',function(ev){handleFile(ev.target.files&&ev.target.files[0]);});
+
+/* ---------- startup self-check ---------- */
+buttons();
+window.__morse={get listening(){return listening;},get ctxState(){return ctx?ctx.state:'none';},get tracksLive(){return !!(stream&&stream.getTracks().some(function(t){return t.readyState==='live';}));}};
+var env=$('envnote');
+if(!hasGUM()){
+  env.style.display='block';env.textContent=micUnavailableReason();
+  setStatus('Ready for recordings. Live microphone is not available here (see the note above).','warn');
+}else{
+  setStatus('Ready. Tap "Start listening" and allow the microphone when asked.','ok');
+}
+})();
+</script></body></html>
