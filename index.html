@@ -1,318 +1,648 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#111111">
 <title>Morse Code Decoder</title>
 <style>
 *{box-sizing:border-box}
-body{font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#111;color:#eee;margin:0 auto;padding:16px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));max-width:760px;-webkit-text-size-adjust:100%}
-h1{font-size:1.4rem;margin:.2em 0 .5em}h2{font-size:1.05rem;margin:0 0 8px}
-button,.filebtn{font-size:1.1rem;min-height:54px;padding:12px 20px;border:0;border-radius:12px;color:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.3);font-family:inherit;display:inline-flex;align-items:center;justify-content:center;text-align:center}
-button:active,.filebtn:active{transform:scale(.97);filter:brightness(1.3)}
-button:disabled{opacity:.4;cursor:default;transform:none;filter:none}
-#row{display:flex;gap:10px;flex-wrap:wrap}
-#start{background:#2b7cff;flex:2 1 180px}#stop{background:#c0392b;flex:1 1 90px}#clear{background:#444;flex:1 1 90px}
-#start.live{background:#1e9e4a}
-.filebtn{background:#6b4de0;width:100%}
-#status{margin:10px 0;padding:12px 14px;border-radius:10px;background:#222;border-left:6px solid #666;font-size:1rem;line-height:1.35}
+body{font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#111;color:#eee;margin:0 auto;padding:14px;padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));padding-bottom:max(30px,env(safe-area-inset-bottom));max-width:760px;-webkit-text-size-adjust:100%}
+h1{font-size:1.45rem;margin:.1em 0 .1em}h2{font-size:1.05rem;margin:0 0 8px;color:#ccc}
+.sub{color:#aaa;margin:0 0 10px;font-size:.98rem}
+button,.filebtn{font-size:1.1rem;min-height:54px;padding:12px 18px;border:0;border-radius:12px;color:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.25);font-family:inherit;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;-webkit-user-select:none;user-select:none}
+button:active,.filebtn:active{filter:brightness(1.3)}
+button:disabled{opacity:.35;cursor:default;filter:none}
+.big{font-size:1.35rem;min-height:72px;font-weight:600}
+#rec{background:#d63031}#rec.on{background:#444;border:3px solid #d63031}
+#translate{background:#1e9e4a;margin-top:10px}
+.filebtn{background:#3d3d55;margin-top:10px;font-size:1rem;min-height:48px}
+#copy,#again{background:#2b6cff;font-size:1rem;min-height:46px}
+.row{display:flex;gap:10px;margin-top:10px}.row>*{flex:1}
+#status{margin:8px 0;padding:11px 13px;border-radius:10px;background:#222;border-left:6px solid #666;font-size:1rem;line-height:1.35}
 #status.ok{border-color:#1e9e4a;background:#14291b}#status.warn{border-color:#e0a800;background:#2c2510}#status.err{border-color:#e74c3c;background:#2f1613}
-#envnote{display:none;margin:10px 0;padding:12px 14px;border-radius:10px;background:#2c2510;border-left:6px solid #e0a800;line-height:1.4}
-.box{background:#1c1c1c;border-radius:12px;padding:14px;margin-top:14px}
-#text{font-size:1.8rem;letter-spacing:2px;min-height:2.6rem;word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap}
-#code{font-family:ui-monospace,Menlo,monospace;font-size:1.05rem;color:#9ad;min-height:1.4rem;word-wrap:break-word;overflow-wrap:anywhere;margin-top:8px}
-.placeholder{color:#777}
-label{display:block;margin:12px 0 4px;font-size:.95rem;color:#bbb}
-input[type=range]{width:100%;height:32px}
-.chk{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:1rem;color:#ddd}.chk input{width:22px;height:22px}
-#meter{height:16px;background:#333;border-radius:8px;overflow:hidden;margin-top:6px}#bar{height:100%;width:0;background:#2b7cff}
-#led{display:inline-block;width:18px;height:18px;border-radius:50%;background:#333;vertical-align:middle;margin-left:8px}
-#info{font-size:.95rem;color:#aaa;margin-top:8px}
-small,.hint{color:#999;font-size:.88rem;line-height:1.35}
+.box{background:#1c1c1c;border-radius:12px;padding:13px;margin-top:12px}
+#timer{font-variant-numeric:tabular-nums;font-size:2rem;text-align:center;margin:10px 0 4px;letter-spacing:1px}
+#meter{height:14px;background:#333;border-radius:7px;overflow:hidden}#bar{height:100%;width:0;background:#2ecc71;transition:width .08s}
+canvas{width:100%;display:block;border-radius:8px;background:#000;margin-top:8px}
+#live{height:56px}#wave{height:90px}#spec{height:210px}
+audio{width:100%;margin-top:10px}
+#dl{display:inline-block;margin-top:8px;color:#8ab4ff}
+#text{font-size:1.9rem;letter-spacing:2px;min-height:2.4rem;word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.25}
+#code{font-family:ui-monospace,Menlo,monospace;font-size:1.05rem;color:#9ad;word-wrap:break-word;overflow-wrap:anywhere;margin-top:8px;line-height:1.5}
+.seg{margin-top:8px;padding:9px 11px;border-radius:9px;background:#252525;font-size:.97rem;line-height:1.4}
+.seg b{color:#fff}.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.conf-high{color:#2ecc71}.conf-medium{color:#f1c40f}.conf-low{color:#ff7b6b}
+.hint,small{color:#999;font-size:.9rem;line-height:1.4}
 input[type=file]{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-progress{width:100%;height:12px;margin-top:10px;display:none}
-details summary{font-size:1rem;padding:10px 0;cursor:pointer}
+details summary{font-size:1rem;padding:10px 0;cursor:pointer;color:#ccc}
+details li{margin:4px 0;color:#bbb;line-height:1.35}
+pre{white-space:pre-wrap;font-size:.8rem;color:#999;overflow-wrap:anywhere}
+[hidden]{display:none!important}
 </style></head><body>
-<h1>Morse Code Decoder <span id="led" title="lit while a beep is heard"></span></h1>
-<noscript><div style="padding:12px;background:#2f1613;border-left:6px solid #e74c3c;border-radius:10px">JavaScript is turned off or blocked here, so nothing on this page can work. Open this page in Safari, Chrome or Edge.</div></noscript>
-
-<div id="status" class="warn" role="status" aria-live="polite">Loading&hellip; if this message never changes, scripts are blocked in this viewer. Open the page in Safari, Chrome or Edge.</div>
-<div id="envnote"></div>
-
-<div id="row">
-<button id="start" type="button">&#127908; Start listening</button>
-<button id="stop" type="button" disabled>Stop</button>
-<button id="clear" type="button">Clear</button>
-</div>
-
-<div class="box"><div id="text" aria-live="polite"></div><div id="code"></div></div>
+<h1>Morse Code Decoder</h1>
+<p class="sub">1. Tap <b>Record</b> and play the beeps. 2. Tap <b>Stop</b>. 3. Tap <b>Translate</b>.</p>
+<noscript><div style="padding:12px;background:#2f1613;border-left:6px solid #e74c3c;border-radius:10px">JavaScript is turned off or blocked here, so this page can't work. Open it in Safari.</div></noscript>
+<div id="status" class="warn" role="status" aria-live="polite">Loading&hellip; if this never changes, scripts are blocked in this viewer. Open the page in Safari.</div>
 
 <div class="box">
-<h2>Decode a recording instead</h2>
-<label class="filebtn" for="file" id="filelbl" role="button">&#128193; Choose audio / video file&hellip;</label>
-<input id="file" type="file" accept="audio/*,video/*,.m4a,.aac,.mp3,.wav,.caf,.aif,.aiff,.mov,.mp4,.m4v,.3gp,.ogg,.oga,.opus,.webm,.flac">
-<progress id="prog" max="100" value="0"></progress>
-<p class="hint">Works with iPhone Voice Memos (.m4a), screen recordings (.mov/.mp4), WAV, MP3 and most other audio or video files. This works even where live microphone access is blocked.</p>
+  <button id="rec" class="big" type="button">&#9679;&nbsp; Record</button>
+  <div id="timer">0:00.0</div>
+  <div id="meter"><div id="bar"></div></div>
+  <canvas id="live" width="600" height="56"></canvas>
+  <label class="filebtn" for="file">Or open a recording (Voice Memo, .m4a, .mp3, .wav&hellip;)</label>
+  <input id="file" type="file" accept="audio/*,video/*,.m4a,.aac,.mp3,.wav,.caf,.aif,.aiff,.mov,.mp4,.m4v,.3gp,.ogg,.oga,.opus,.webm,.flac">
 </div>
 
-<div class="box">
-<h2>Live signal</h2>
-<div>Level <span id="lvlv"></span></div><div id="meter"><div id="bar"></div></div>
-<div id="info">Tone: <b id="fdisp">&ndash;</b> &nbsp; Speed: <b id="wdisp">&ndash;</b></div>
-<details><summary>Settings</summary>
-<label class="chk"><input type="checkbox" id="autof" checked> Auto-detect tone pitch</label>
-<label for="freq">Tone pitch: <span id="fv"></span></label><input id="freq" type="range" min="300" max="2000" step="10" value="700" disabled>
-<label class="chk"><input type="checkbox" id="autow" checked> Auto-detect speed</label>
-<label for="wpm">Speed: <span id="wv"></span></label><input id="wpm" type="range" min="5" max="40" step="1" value="15" disabled>
-<label for="sens">Noise rejection (minimum beep-to-background ratio): <span id="sv"></span></label><input id="sens" type="range" min="1.5" max="8" step="0.5" value="2.5">
-<small>Raise this if noise creates false letters. Lower it if quiet beeps are missed.</small>
-</details>
-<p class="hint">Tips: hold the beeping source close to the microphone and keep other noise down.</p>
+<div class="box" id="clipbox" hidden>
+  <h2 id="clipinfo">Recording</h2>
+  <canvas id="wave" width="600" height="90"></canvas>
+  <div class="hint">Each beep should show as a block on this line. If it's flat, the microphone didn't hear the beeps.</div>
+  <div class="row"><button id="play" type="button" style="background:#3d3d55;font-size:1rem;min-height:46px">&#9654;&nbsp; Play recording</button></div>
+  <a id="dl" href="#" download="morse-recording.wav">Save this recording (.wav)</a>
+  <button id="translate" class="big" type="button">Translate</button>
 </div>
 
+<div class="box" id="resbox" hidden>
+  <h2>Translation</h2>
+  <div id="text"></div>
+  <div id="code"></div>
+  <div class="row"><button id="copy" type="button">Copy text</button><button id="again" type="button">New recording</button></div>
+  <div id="segs"></div>
+  <canvas id="spec" width="600" height="210"></canvas>
+  <div class="hint" id="speclegend">Picture of the sound: time left&rarr;right, pitch low (bottom) to high (top). Bright = loud. Colored bars under each tone are the beeps that were read.</div>
+  <details><summary>Technical details</summary><pre id="details"></pre></details>
+</div>
+
+<details class="box"><summary>Tips for best results</summary><ul>
+<li>Hold the phone close to the speaker that plays the beeps (about 10&ndash;30 cm / 4&ndash;12 in), in a quiet room.</li>
+<li>Start recording a moment before the beeps begin and stop a moment after.</li>
+<li>Any pitch from about 150 to 4000 Hz works. If the pitch changes during the recording, each pitch is read separately.</li>
+<li>Any speed from about 5 to 50 words per minute works. The speed is measured automatically, even if it changes.</li>
+<li>Strong echo (a big empty room, phone far from the speaker) can blur very fast beeps together. Move closer.</li>
+<li>If the answer looks wrong, tap &ldquo;Save this recording&rdquo; and keep the file so it can be checked.</li>
+</ul></details>
+
+<script>
+/* Morse decoder core: offline analysis of a whole recording.
+   MorseCore.analyze(Float32Array samples, sampleRate[, opts]) -> result */
+(function(root){
+'use strict';
+var CODE={'.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J','-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T','..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z',
+'-----':'0','.----':'1','..---':'2','...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9',
+'.-.-.-':'.','--..--':',','..--..':'?','.----.':"'",'-.-.--':'!','-..-.':'/','-.--.':'(','-.--.-':')','.-...':'&','---...':':','-.-.-.':';','-...-':'=','.-.-.':'+','-....-':'-','..--.-':'_','.-..-.':'"','...-..-':'$','.--.-.':'@',
+'...---...':'SOS','...-.-':'<SK>','-.-.-':'<KA>','........':'<ERR>','.........':'<ERR>','......':'<ERR>','.......':'<ERR>'};
+var LN3=Math.log(3);
+
+/* ---------- FFT ---------- */
+function makeFFT(n){
+  var lev=Math.round(Math.log(n)/Math.LN2),cos=new Float64Array(n/2),sin=new Float64Array(n/2),rev=new Uint32Array(n),i;
+  for(i=0;i<n/2;i++){cos[i]=Math.cos(2*Math.PI*i/n);sin[i]=Math.sin(2*Math.PI*i/n);}
+  for(i=0;i<n;i++){var r=0,v=i;for(var b=0;b<lev;b++){r=(r<<1)|(v&1);v>>=1;}rev[i]=r;}
+  return function(re,im){
+    var i,j,t;
+    for(i=0;i<n;i++){j=rev[i];if(j>i){t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+    for(var size=2;size<=n;size<<=1){
+      var half=size>>1,step=n/size;
+      for(i=0;i<n;i+=size){
+        for(j=0,k=0;j<half;j++,k+=step){
+          var a=i+j,b=a+half,tr=re[b]*cos[k]+im[b]*sin[k],ti=-re[b]*sin[k]+im[b]*cos[k];
+          re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;
+        }
+      }
+    }
+    var k;
+  };
+}
+function pct(arr,p){ // percentile of a (copied) numeric array
+  var a=Array.prototype.slice.call(arr).sort(function(x,y){return x-y;});
+  if(!a.length)return 0;var i=Math.min(a.length-1,Math.max(0,Math.floor(p*(a.length-1))));return a[i];
+}
+function median(a){return pct(a,0.5);}
+
+/* ---------- 1. spectrogram + per-bin noise floor ---------- */
+function spectrogram(x,sr){
+  var N=1;while(N<sr*0.02)N<<=1;
+  var dur=x.length/sr,hopS=dur>240?0.01:0.005,hop=Math.max(1,Math.round(sr*hopS));
+  var fmin=150,fmax=Math.min(4000,0.45*sr),binHz=sr/N,b0=Math.max(1,Math.floor(fmin/binHz)),b1=Math.min(N/2-2,Math.ceil(fmax/binHz)),nb=b1-b0+1;
+  var frames=Math.max(1,Math.floor((x.length-N)/hop)+1);
+  var mags=new Float32Array(frames*nb),win=new Float64Array(N),re=new Float64Array(N),im=new Float64Array(N),fft=makeFFT(N),i,f,b;
+  for(i=0;i<N;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/N);
+  for(f=0;f<frames;f++){
+    var o=f*hop;
+    for(i=0;i<N;i++){var v=x[o+i];re[i]=(v===undefined?0:v)*win[i];im[i]=0;}
+    fft(re,im);
+    for(b=0;b<nb;b++){var bb=b0+b;mags[f*nb+b]=Math.sqrt(re[bb]*re[bb]+im[bb]*im[bb])*(4/N);}
+  }
+  // per-bin noise floor = 20th percentile over time (all frames), but never below the typical background of the
+  // non-silent frames: digitally silent stretches (padding, muted start) would otherwise pull the floor to ~0
+  var gmax=0;for(i=0;i<mags.length;i++)if(mags[i]>gmax)gmax=mags[i];
+  var live=[];for(f=0;f<frames;f++){var fm=0;for(b=0;b<nb;b++)if(mags[f*nb+b]>fm)fm=mags[f*nb+b];if(fm>gmax*1e-5)live.push(f);}
+  if(!live.length)for(f=0;f<frames;f++)live.push(f);
+  var stride=Math.max(1,Math.floor(frames/6000)),lstride=Math.max(1,Math.floor(live.length/6000)),floor=new Float32Array(nb),fl=new Float32Array(nb),col=[];
+  for(b=0;b<nb;b++){
+    col.length=0;for(f=0;f<frames;f+=stride)col.push(mags[f*nb+b]);floor[b]=pct(col,0.2);
+    col.length=0;for(var li=0;li<live.length;li+=lstride)col.push(mags[live[li]*nb+b]);fl[b]=pct(col,0.2);
+  }
+  var g=Math.max(1e-7,median(fl));for(b=0;b<nb;b++)if(floor[b]<g)floor[b]=g;
+  return {mags:mags,frames:frames,nb:nb,b0:b0,binHz:binHz,hop:hop,hopS:hop/sr,N:N,floor:floor,sr:sr};
+}
+
+/* ---------- 2. find tone frequencies ---------- */
+function findPeaks(S){
+  var nb=S.nb,peaks=[],tmp=new Float32Array(nb);
+  for(var f=0;f<S.frames;f++){
+    var best=-1,bs=0,o=f*nb;
+    for(var b=0;b<nb;b++){tmp[b]=S.mags[o+b];var s=S.mags[o+b]/S.floor[b];if(s>bs){bs=s;best=b;}}
+    if(best<1||best>nb-2||bs<4)continue;
+    var fm=median(tmp);
+    if(S.mags[o+best]<4*fm)continue;          // broadband click / noise burst: not a tone
+    var a=Math.log(S.mags[o+best-1]+1e-12),c=Math.log(S.mags[o+best]+1e-12),d=Math.log(S.mags[o+best+1]+1e-12);
+    var den=a-2*c+d,off=den<0?0.5*(a-d)/den:0;if(off>0.5)off=0.5;if(off<-0.5)off=-0.5;
+    peaks.push({f:f,t:(f*S.hop+S.N/2)/S.sr,hz:(S.b0+best+off)*S.binHz,snr:bs});
+  }
+  return peaks;
+}
+function clusterPeaks(peaks,S){
+  var fmin=150,R=1.01,nbins=Math.ceil(Math.log(4500/fmin)/Math.log(R))+1,h=new Float64Array(nbins),i;
+  function hb(hz){return Math.max(0,Math.min(nbins-1,Math.round(Math.log(hz/fmin)/Math.log(R))));}
+  for(i=0;i<peaks.length;i++){peaks[i].hb=hb(peaks[i].hz);h[peaks[i].hb]+=1;}
+  var sm=new Float64Array(nbins),k=[1,2,3,2,1];
+  function smooth(){for(var j=0;j<nbins;j++){var s=0;for(var q=-2;q<=2;q++){var jj=j+q;if(jj>=0&&jj<nbins)s+=h[jj]*k[q+2];}sm[j]=s/9;}}
+  var clusters=[],minCount=Math.max(6,0.03*peaks.length);
+  for(var it=0;it<8;it++){
+    smooth();var m=0;for(i=1;i<nbins;i++)if(sm[i]>sm[m])m=i;
+    if(sm[m]<=0)break;
+    var lo=m,hi=m;
+    while(lo>0&&sm[lo-1]>0.12*sm[m]&&m-lo<10)lo--;
+    while(hi<nbins-1&&sm[hi+1]>0.12*sm[m]&&hi-m<10)hi++;
+    var mem=[];for(i=0;i<peaks.length;i++)if(peaks[i].hb>=lo&&peaks[i].hb<=hi&&peaks[i].cl===undefined)mem.push(peaks[i]);
+    for(i=lo;i<=hi;i++)h[i]=0;
+    if(mem.length<minCount)continue;
+    var cid=clusters.length;mem.forEach(function(p){p.cl=cid;});
+    var hz=median(mem.map(function(p){return p.hz;})),w=0;mem.forEach(function(p){w+=Math.log(p.snr);});
+    clusters.push({id:cid,hz:hz,peaks:mem,weight:w});
+  }
+  // drop clusters that are keyed in lock-step with a stronger one (harmonics / speaker distortion)
+  var on=clusters.map(function(c){
+    var bc=Math.round(c.hz/S.binHz)-S.b0,set=new Uint8Array(S.frames);
+    for(var f=0;f<S.frames;f++){var mx=0;for(var d=-1;d<=1;d++){var b=bc+d;if(b>=0&&b<S.nb){var s=S.mags[f*S.nb+b]/S.floor[b];if(s>mx)mx=s;}}if(mx>=4)set[f]=1;}
+    return set;
+  });
+  var order=clusters.map(function(c,i){return i;}).sort(function(a,b){return clusters[b].weight-clusters[a].weight;}),keep=[];
+  order.forEach(function(i){
+    var dup=false;
+    keep.forEach(function(j){
+      var A=on[i],B=on[j],nA=0,nB=0,both=0;for(var f=0;f<S.frames;f++){if(A[f])nA++;if(B[f])nB++;if(A[f]&&B[f])both++;}
+      if(both/Math.max(1,Math.min(nA,nB))>0.75){dup=true;clusters[i].dupOf=clusters[j].hz;}
+    });
+    if(!dup)keep.push(i);
+  });
+  return keep.map(function(i){return clusters[i];});
+}
+function segmentsOf(cl,splitGap){
+  var ts=cl.peaks.map(function(p){return p.t;}).sort(function(a,b){return a-b;}),segs=[],s=null;
+  ts.forEach(function(t){if(!s||t-s.t1>splitGap){s={t0:t,t1:t,n:0};segs.push(s);}s.t1=t;s.n++;});
+  return segs.filter(function(s){return s.n>=3;});
+}
+function pitchTrack(cl,t0,t1){
+  var ps=cl.peaks.filter(function(p){return p.t>=t0&&p.t<=t1;}),blk=0.4,pts=[];
+  if(!ps.length)return function(){return cl.hz;};
+  var nb=Math.ceil((t1-t0)/blk)+1,buckets=[];for(var i=0;i<nb;i++)buckets.push([]);
+  ps.forEach(function(p){buckets[Math.min(nb-1,Math.floor((p.t-t0)/blk))].push(p.hz);});
+  buckets.forEach(function(b,i){if(b.length)pts.push([t0+(i+0.5)*blk,median(b)]);});
+  return function(t){
+    if(t<=pts[0][0])return pts[0][1];if(t>=pts[pts.length-1][0])return pts[pts.length-1][1];
+    for(var i=1;i<pts.length;i++)if(t<pts[i][0]){var a=pts[i-1],b=pts[i],r=(t-a[0])/(b[0]-a[0]);return a[1]+r*(b[1]-a[1]);}
+    return pts[pts.length-1][1];
+  };
+}
+
+/* ---------- 3. narrow-band envelope (quadrature demodulation) ---------- */
+function baseband(x,sr,t0,t1,track){ // returns I/Q block means at 4 kHz
+  var n0=Math.max(0,Math.floor(t0*sr)),n1=Math.min(x.length,Math.floor(t1*sr)),sub=sr/4000,M=Math.floor((n1-n0)/sub);
+  var I=new Float32Array(M),Q=new Float32Array(M),ph=0,n=n0;
+  for(var j=0;j<M;j++){
+    var e=n0+Math.round((j+1)*sub),hz=track(t0+(j+0.5)/4000),w=2*Math.PI*hz/sr,si=0,sq=0,cnt=0;
+    for(;n<e;n++){var v=x[n];si+=v*Math.cos(ph);sq-=v*Math.sin(ph);ph+=w;cnt++;}
+    if(ph>1e4)ph=ph%(2*Math.PI);
+    I[j]=si/cnt;Q[j]=sq/cnt;
+  }
+  return {I:I,Q:Q,M:M,t0:n0/sr};
+}
+function boxc(I,Q,L){ // centered moving average on complex signal
+  var M=I.length,cI=new Float64Array(M+1),cQ=new Float64Array(M+1),oI=new Float32Array(M),oQ=new Float32Array(M),h=Math.floor(L/2);
+  for(var j=0;j<M;j++){cI[j+1]=cI[j]+I[j];cQ[j+1]=cQ[j]+Q[j];}
+  for(j=0;j<M;j++){var a=Math.max(0,j-h),b=Math.min(M,j-h+L),n=b-a;oI[j]=(cI[b]-cI[a])/n;oQ[j]=(cQ[b]-cQ[a])/n;}
+  return [oI,oQ];
+}
+function envelope(bb,W){ // amplitude envelope sampled every 1 ms
+  var L=Math.max(1,Math.round(W*4000)),r=boxc(bb.I,bb.Q,L);r=boxc(r[0],r[1],L);
+  var K=Math.floor(bb.M/4),env=new Float32Array(K);
+  for(var k=0;k<K;k++){var j=4*k+2;if(j>=bb.M)j=bb.M-1;env[k]=2*Math.sqrt(r[0][j]*r[0][j]+r[1][j]*r[1][j]);}
+  return env;
+}
+
+/* ---------- 4. threshold the envelope into marks ---------- */
+function slideMin(a,w){var n=a.length,o=new Float32Array(n),h=Math.floor(w/2);for(var i=0;i<n;i++){var m=Infinity;for(var j=Math.max(0,i-h);j<=Math.min(n-1,i+h);j++)if(a[j]<m)m=a[j];o[i]=m;}return o;}
+function blockStat(a,blk,fn){var nb=Math.ceil(a.length/blk),o=new Float32Array(nb);for(var b=0;b<nb;b++)o[b]=fn(Array.prototype.slice.call(a,b*blk,Math.min(a.length,(b+1)*blk)));return o;}
+function marksFrom(env,W,winMs,frac){
+  var K=env.length;if(K<10)return {marks:[],noise:null};
+  frac=frac||0.5;winMs=winMs||1500;
+  var blk=50,noiseB=blockStat(env,blk,function(s){return pct(s,0.2);}),nb=noiseB.length;
+  var ero=slideMin(env,Math.max(3,Math.round(W*1000)));
+  var peakB=blockStat(ero,blk,function(s){var m=0;for(var i=0;i<s.length;i++)if(s[i]>m)m=s[i];return m;});
+  var nL=new Float32Array(nb),pL=new Float32Array(nb),R=40,RP=Math.max(2,Math.round(winMs/blk)),b;
+  for(b=0;b<nb;b++){
+    var ns=[],pm=0;for(var q=Math.max(0,b-R);q<=Math.min(nb-1,b+R);q++){ns.push(noiseB[q]);}
+    for(q=Math.max(0,b-RP);q<=Math.min(nb-1,b+RP);q++)if(peakB[q]>pm)pm=peakB[q];
+    nL[b]=pct(ns,0.2);pL[b]=pm;
+  }
+  var gp=pct(peakB,0.9);
+  var marks=[],on=false,st=0,thr=new Float32Array(K);
+  for(var k=0;k<K;k++){
+    var bi=Math.min(nb-1,Math.floor(k/blk)),nz=nL[bi],pk=pL[bi],present=pk>=3.5*nz&&pk>=0.1*gp&&pk>0,D=pk-nz;
+    var tOn,tOff;
+    if(frac<0){var f=-frac,ln=Math.log(Math.max(nz,1e-9)),lp=Math.log(Math.max(pk,1e-9));tOn=Math.exp(ln+(f+0.05)*(lp-ln));tOff=Math.exp(ln+(f-0.05)*(lp-ln));thr[k]=present?Math.exp(ln+f*(lp-ln)):Infinity;}
+    else{tOn=nz+(frac+0.05)*D;tOff=nz+(frac-0.05)*D;thr[k]=present?nz+frac*D:Infinity;}
+    if(!on){if(present&&env[k]>tOn){on=true;st=k;}}
+    else if(!present||env[k]<tOff){on=false;marks.push([st,k]);}
+  }
+  if(on)marks.push([st,K]);
+  marks.forEach(function(m){var p=0;for(var q=m[0];q<m[1];q++)if(env[q]>p)p=env[q];m[2]=p;});
+  return {marks:marks,thr:thr,nL:nL,pL:pL,gp:gp};
+}
+function debounce(marks,minGap,minMark){ // fixed or per-mark (functions) limits, in ms
+  var out=[],i;
+  for(i=0;i<marks.length;i++){
+    var m=[marks[i][0],marks[i][1],marks[i][2]||0];
+    if(out.length){var p=out[out.length-1],g=m[0]-p[1];if(g<(typeof minGap==='function'?minGap(m[0]):minGap)){p[1]=m[1];p[2]=Math.max(p[2],m[2]);continue;}}
+    out.push(m);
+  }
+  return out.filter(function(m){return m[1]-m[0]>=(typeof minMark==='function'?minMark(m[0]):minMark);});
+}
+
+/* ---------- 5. adaptive timing: Viterbi over the unit length ---------- */
+var U=[];(function(){for(var u=17;u<=700;u*=1.04)U.push(u);})();
+var LU=U.map(Math.log),S2=0.28*0.28,CAP=12,CLONG=1.5,DASHP=0.05,LAM=0.6,LAMB=0.05,PAUSE=2500;
+function eventsOf(marks){
+  var ev=[];
+  for(var i=0;i<marks.length;i++){
+    if(i)ev.push({m:false,d:marks[i][0]-marks[i-1][1],i:i});
+    ev.push({m:true,d:Math.max(1,marks[i][1]-marks[i][0]),i:i});
+  }
+  ev.forEach(function(e){e.pause=!e.m&&e.d>=PAUSE;});
+  return markBig(ev);
+}
+function markBig(ev){
+  for(var j=0;j<ev.length;j++){if(ev[j].m)continue;var loc=[];for(var q=Math.max(0,j-20);q<=Math.min(ev.length-1,j+20);q++)if(!ev[q].m)loc.push(ev[q].d);ev[j].big=ev[j].d>=4*median(loc);}
+  return ev;
+}
+function emit(e,k){
+  var ld=Math.log(Math.max(1,e.d)),lu=LU[k],a,b;
+  if(e.m){a=(ld-lu)*(ld-lu);b=(ld-lu-LN3)*(ld-lu-LN3)+DASHP*S2;return a<=b?[Math.min(CAP,a/S2),0]:[Math.min(CAP,b/S2),1];}
+  if(e.pause)return [0,2];
+  a=(ld-lu)*(ld-lu)/S2;var z=Math.max(0,lu+Math.log(2.7)-ld);b=CLONG+z*z/S2;
+  return a<=b?[Math.min(CAP,a),0]:[Math.min(CAP,b),1];
+}
+function viterbi(ev){
+  var K=U.length,n=ev.length;if(!n)return {u:[],cls:[],cost:0};
+  var cost=new Float64Array(K),nc=new Float64Array(K),tmp=new Float64Array(K),arg=new Int32Array(K),bp=new Int16Array(n*K),e,k;
+  for(e=0;e<n;e++){
+    var lam=(e>0&&ev[e-1].pause)?0.01:(e>0&&ev[e-1].big)?LAMB:LAM;
+    tmp[0]=cost[0];arg[0]=0;
+    for(k=1;k<K;k++){if(cost[k]<=tmp[k-1]+lam){tmp[k]=cost[k];arg[k]=k;}else{tmp[k]=tmp[k-1]+lam;arg[k]=arg[k-1];}}
+    for(k=K-2;k>=0;k--){if(tmp[k+1]+lam<tmp[k]){tmp[k]=tmp[k+1]+lam;arg[k]=arg[k+1];}}
+    var mn=Infinity;
+    for(k=0;k<K;k++){nc[k]=tmp[k]+emit(ev[e],k)[0];bp[e*K+k]=arg[k];if(nc[k]<mn)mn=nc[k];}
+    for(k=0;k<K;k++)cost[k]=nc[k]-mn;
+  }
+  var best=0;for(k=1;k<K;k++)if(cost[k]<cost[best])best=k;
+  var path=new Int32Array(n);k=best;for(e=n-1;e>=0;e--){path[e]=k;k=bp[e*K+k];}
+  var u=[],cls=[],tot=0,cnt=0;
+  for(e=0;e<n;e++){var r=emit(ev[e],path[e]);u.push(U[path[e]]);cls.push(r[1]);if(!ev[e].pause){tot+=r[0];cnt++;}}
+  return {u:u,cls:cls,cost:cnt?tot/cnt:0};
+}
+
+/* ---------- 6. turn classified events into text ---------- */
+function kmeans2(v){ // 1-D 2-means on values v; returns {c1,c2,n1,n2}
+  var c1=Math.min(Math.log(3),Math.min.apply(null,v)),c2=Math.max(Math.log(7),Math.max.apply(null,v)*0+Math.log(7));
+  for(var it=0;it<30;it++){var s1=0,n1=0,s2=0,n2=0;v.forEach(function(x){if(Math.abs(x-c1)<=Math.abs(x-c2)){s1+=x;n1++;}else{s2+=x;n2++;}});if(n1)c1=s1/n1;if(n2)c2=s2/n2;}
+  var n1=0,n2=0;v.forEach(function(x){if(Math.abs(x-c1)<=Math.abs(x-c2))n1++;else n2++;});
+  return {c1:c1,c2:c2,n1:n1,n2:n2};
+}
+function decodeEvents(ev,V){
+  var longs=[];ev.forEach(function(e,i){if(!e.m&&!e.pause&&V.cls[i]===1)longs.push(Math.log(e.d/V.u[i]));});
+  var bound=Math.log(5),sep=false;
+  // letter gaps are the most common long gap; word gaps are about 7/3 as long (Farnsworth keeps that ratio)
+  if(longs.length){
+    var bestC=-1,mode=0;longs.forEach(function(v){var c=0,sm=0;longs.forEach(function(w){if(Math.abs(w-v)<Math.log(1.25)){c++;sm+=w;}});if(c>bestC||(c===bestC&&sm/c<mode)){bestC=c;mode=sm/c;}});
+    bound=mode+0.5*Math.log(7/3);sep=true;
+  }
+  if(!sep)bound=Infinity; // a single kind of long gap: treat all as letter gaps
+  var text='',code='',cur='',unknown=0,chars=0;
+  function flush(){if(!cur)return;var c=CODE[cur];chars++;if(!c){c='*';unknown++;}text+=c;code+=(code&&!/ $/.test(code)?' ':'')+cur;cur='';}
+  ev.forEach(function(e,i){
+    if(e.m){cur+=V.cls[i]?'-':'.';return;}
+    if(V.cls[i]===0)return;
+    var word=e.pause||Math.log(e.d/V.u[i])>bound;
+    flush();if(word&&text&&!/ $/.test(text)){text+=' ';code+=' / ';}
+  });
+  flush();
+  return {text:text.trim(),code:code.replace(/ \/ $/,'').trim(),unknown:unknown,chars:chars};
+}
+function timingDecode(marks0){
+  var marks=debounce(marks0,5,10);if(!marks.length)return null;
+  var ev=eventsOf(marks),V=viterbi(ev);
+  // second debounce relative to the local unit
+  var uAt=function(t){var best=V.u[0],bd=Infinity;for(var i=0;i<ev.length;i++){var mi=marks[ev[i].i];var d=Math.abs(mi[0]-t);if(d<bd){bd=d;best=V.u[i];}}return best;};
+  var marks2=debounce(marks,function(t){return 0.25*uAt(t);},function(t){return 0.3*uAt(t);});
+  if(!marks2.length)return null;
+  // weak isolated blips at the very start / end are noise, not Morse
+  var pk=median(marks2.map(function(m){return m[2];}));
+  function edgeTrim(){
+    for(var n=1;n<=3&&n<marks2.length;n++){ // leading group of n marks
+      var g=marks2[n][0]-marks2[n-1][1],mx=0;for(var q=0;q<n;q++)mx=Math.max(mx,marks2[q][2]);
+      if(g>=5*uAt(marks2[n][0])){if(mx<0.5*pk){marks2.splice(0,n);return true;}break;}
+    }
+    for(n=1;n<=3&&n<marks2.length;n++){ // trailing group
+      var L=marks2.length;g=marks2[L-n][0]-marks2[L-n-1][1];mx=0;for(q=L-n;q<L;q++)mx=Math.max(mx,marks2[q][2]);
+      if(g>=5*uAt(marks2[L-n][0])){if(mx<0.5*pk){marks2.splice(L-n,n);return true;}break;}
+    }
+    return false;
+  }
+  while(marks2.length>1&&edgeTrim()){}
+  ev=eventsOf(marks2);V=viterbi(ev);
+  // systematic lengthening of marks / shortening of gaps (filter, reverb): estimate and remove
+  var rd=[],rg=[];ev.forEach(function(e,i){if(e.m&&V.cls[i]===0)rd.push(e.d/V.u[i]);if(!e.m&&V.cls[i]===0)rg.push(e.d/V.u[i]);});
+  var beta=0;
+  if(rd.length>=3&&rg.length>=3){beta=Math.max(-0.45,Math.min(0.45,(median(rd)-median(rg))/2));}
+  if(Math.abs(beta)>0.05){
+    var ev2=ev.map(function(e,i){return {m:e.m,d:e.m?Math.max(1,e.d-beta*V.u[i]):e.d+beta*V.u[i],i:e.i,pause:e.pause,big:e.big};});
+    ev=markBig(ev2);V=viterbi(ev);
+  }
+  // still a poor fit: echo tails may be stretching every beep by a fixed time; try fixed offsets
+  if(V.cost>0.4){
+    var base=ev,um=median(V.u),bestC=V.cost;
+    [10,20,30,45,60].forEach(function(bms){
+      if(bms>0.9*um)return;
+      var e2=base.map(function(e){return {m:e.m,d:e.m?Math.max(1,e.d-bms):e.d+bms,i:e.i,pause:e.pause,big:e.big};});
+      markBig(e2);var V2=viterbi(e2);
+      if(V2.cost<bestC-0.15){bestC=V2.cost;ev=e2;V=V2;beta=bms/um;}
+    });
+  }
+  var dec=decodeEvents(ev,V);
+  var us=V.u.filter(function(u,i){return ev[i].m;});
+  return {marks:marks2,ev:ev,V:V,dec:dec,beta:beta,uMed:median(us),uP10:pct(us,0.1),uP90:pct(us,0.9),cost:V.cost};
+}
+
+/* ---------- 7. decode one tone segment, trying several filter widths ---------- */
+var WS=[0.003,0.005,0.008,0.012,0.018,0.026,0.036,0.05];
+function decodeSegment(x,sr,cl,seg,others){
+  var t0=Math.max(0,seg.t0-0.6),t1=Math.min(x.length/sr,seg.t1+0.6);
+  var track=pitchTrack(cl,t0,t1),bb=baseband(x,sr,t0,t1,track),best=null,tried=[];
+  function attempt(W,env,win,frac){
+    var mf=marksFrom(env,W,win,frac),r=timingDecode(mf.marks);
+    if(!r){tried.push({W:W,win:win,frac:frac,ok:false});return null;}
+    var valid=W*1000<=0.6*r.uMed+1e-6&&r.uMed>U[0]*1.1;
+    var score=r.cost+3*(r.dec.chars?r.dec.unknown/r.dec.chars:1);
+    tried.push({W:W,win:win,frac:frac,ok:true,valid:valid,base:score,n:r.marks.length,text:r.dec.text,wpm:Math.round(1200/r.uMed),r:r,env:env,thr:mf.thr});
+    return r;
+  }
+  var minW=0;(others||[]).forEach(function(hz){var d=Math.abs(hz-cl.hz);if(d>0&&d<500)minW=Math.max(minW,1.25/d);});
+  var ws=WS.filter(function(W){return W>=minW;});if(!ws.length)ws=[WS[WS.length-1]];
+  ws.forEach(function(W){
+    var env=envelope(bb,W);
+    [0.5,0.65,-0.5].forEach(function(frac){
+      var r=attempt(W,env,1500,frac);
+      if(r){var win=Math.max(300,Math.min(1500,8*r.uMed));if(win<1400)attempt(W,env,win,frac);}
+    });
+  });
+  var minB=Infinity;tried.forEach(function(t){if(t.ok&&t.valid&&t.base<minB)minB=t.base;});
+  var maxN=0;tried.forEach(function(t){if(t.ok&&t.valid&&t.base<=minB+0.5&&t.n>maxN)maxN=t.n;});
+  tried.forEach(function(t){if(!t.ok||!t.valid)return;t.score=t.base+0.5*Math.log(Math.max(1,maxN/t.n));if(!best||t.score<best.score-1e-9)best={W:t.W,score:t.score,r:t.r,env:t.env,thr:t.thr};});
+  tried=tried.map(function(t){return {W:t.W,win:t.win,frac:t.frac,ok:t.ok,valid:t.valid,score:t.score!==undefined?+t.score.toFixed(3):undefined,n:t.n,text:t.text,wpm:t.wpm};});
+  if(!best)return {tried:tried};
+  var r=best.r,o=bb.t0;
+  return {
+    t0:o+r.marks[0][0]/1000,t1:o+r.marks[r.marks.length-1][1]/1000,
+    hz:Math.round(median(cl.peaks.filter(function(p){return p.t>=t0&&p.t<=t1;}).map(function(p){return p.hz;}))||cl.hz),
+    text:r.dec.text,code:r.dec.code,unknown:r.dec.unknown,chars:r.dec.chars,
+    wpm:Math.round(1200/r.uMed),wpmMin:Math.round(1200/r.uP90),wpmMax:Math.round(1200/r.uP10),
+    marks:r.marks.map(function(m){return [o+m[0]/1000,o+m[1]/1000,m[2]];}),
+    W:best.W,score:+best.score.toFixed(3),beta:+r.beta.toFixed(2),nMarks:r.marks.length,tried:tried,
+    env:best.env,envT0:o,thr:best.thr
+  };
+}
+
+function analyze(x,sr,opts){
+  opts=opts||{};
+  var T0=Date.now();
+  // remove DC
+  var S=spectrogram(x,sr),peaks=findPeaks(S),clusters=clusterPeaks(peaks,S),segs=[];
+  clusters.forEach(function(cl){
+    segmentsOf(cl,6).forEach(function(sg){
+      var d=decodeSegment(x,sr,cl,sg,clusters.filter(function(c){return c!==cl;}).map(function(c){return c.hz;}));
+      if(d.text!==undefined&&d.nMarks>0)segs.push(d);else if(opts.debug)console.log("segment failed",JSON.stringify(d.tried));
+    });
+  });
+  // leakage: a mark that coincides with a much stronger mark of another tone is that tone bleeding through
+  if(segs.length>1){
+    var drop=segs.map(function(s){return s.marks.map(function(){return false;});});
+    segs.forEach(function(A,ai){A.marks.forEach(function(m,mi){
+      segs.forEach(function(B,bi){if(bi===ai)return;B.marks.forEach(function(n){
+        var ov=Math.min(m[1],n[1])-Math.max(m[0],n[0]);if(ov>0.5*Math.min(m[1]-m[0],n[1]-n[0])&&n[2]>2*m[2])drop[ai][mi]=true;});});});});
+    segs=segs.map(function(A,ai){
+      if(!drop[ai].some(Boolean))return A;
+      var keep=A.marks.filter(function(m,mi){return !drop[ai][mi];});if(!keep.length)return null;
+      var o=A.envT0,r=timingDecode(keep.map(function(m){return [Math.round((m[0]-o)*1000),Math.round((m[1]-o)*1000),m[2]];}));
+      if(!r)return null;
+      A.text=r.dec.text;A.code=r.dec.code;A.unknown=r.dec.unknown;A.chars=r.dec.chars;A.wpm=Math.round(1200/r.uMed);A.wpmMin=Math.round(1200/r.uP90);A.wpmMax=Math.round(1200/r.uP10);
+      A.marks=r.marks.map(function(m){return [o+m[0]/1000,o+m[1]/1000,m[2]];});A.nMarks=A.marks.length;A.t0=A.marks[0][0];A.t1=A.marks[A.marks.length-1][1];A.leakRemoved=true;
+      return A;
+    }).filter(Boolean);
+  }
+  segs.sort(function(a,b){return a.t0-b.t0;});
+  // confidence from how well the timing fits Morse (measured on test recordings: good decodes scored below ~0.45)
+  var ignored=[];
+  segs=segs.filter(function(s){
+    var singles=(s.text.match(/(^| )[ET]+(?= |$)/g)||[]).join('').replace(/ /g,'').length,letters=s.text.replace(/ /g,'').length;
+    var junk=s.score>1.5||(letters>=6&&singles/letters>0.6)||s.nMarks<2;
+    s.confidence=s.score<0.45?'high':(s.score<0.7?'medium':'low');
+    if(junk){ignored.push({hz:s.hz,t0:s.t0,t1:s.t1,text:s.text,score:s.score});return false;}
+    return true;
+  });
+  var text=segs.map(function(s){return s.text;}).filter(Boolean).join(' ');
+  var code=segs.map(function(s){return s.code;}).filter(Boolean).join(' / ');
+  return {text:text,code:code,segments:segs,ignored:ignored,clusters:clusters.map(function(c){return {hz:Math.round(c.hz),frames:c.peaks.length};}),
+    duration:x.length/sr,sr:sr,spec:S,ms:Date.now()-T0};
+}
+
+var API={analyze:analyze,CODE:CODE,_internal:{baseband:baseband,envelope:envelope,marksFrom:marksFrom,pitchTrack:pitchTrack,segmentsOf:segmentsOf,spectrogram:spectrogram,findPeaks:findPeaks,clusterPeaks:clusterPeaks,timingDecode:timingDecode,viterbi:viterbi,eventsOf:eventsOf}};
+if(typeof module!=='undefined'&&module.exports)module.exports=API;else root.MorseCore=API;
+})(this);
+
+</script>
 <script>
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id);};
 var statusEl=$('status');
 function setStatus(msg,cls){statusEl.textContent=msg;statusEl.className=cls||'';}
-window.addEventListener('error',function(e){setStatus('Script error: '+(e.message||e)+'. Please tell the page author.','err');});
-window.addEventListener('unhandledrejection',function(e){setStatus('Error: '+((e.reason&&e.reason.message)||e.reason),'err');});
+window.onerror=function(m){setStatus('Something went wrong in the page: '+m,'err');};
+var AC=window.AudioContext||window.webkitAudioContext;
+var R={on:false,starting:false,ctx:null,stream:null,src:null,proc:null,mute:null,chunks:[],n:0,sr:0,startT:0,mr:null,mrChunks:[],mrType:'',timer:null,levels:[],peak:0};
+var clip=null; // {x:Float32Array, sr:Number, name:String}
+var busy=false,wavURL=null;
 
-var M={'.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J','-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T','..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z','-----':'0','.----':'1','..---':'2','...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9','.-.-.-':'.','--..--':',','..--..':'?','-..-.':'/','-....-':'-','-.--.':'(','-.--.-':')','.--.-.':'@','-...-':'=','.-.-.':'+','---...':':','.----.':"'",'.-..-.':'"','-.-.--':'!','...-.-':'<SK>','.-...':'&'};
+function fmtT(s){var m=Math.floor(s/60),r=s-60*m;return m+':'+(r<10?'0':'')+r.toFixed(1);}
+function hasMic(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);}
+function micHelp(e){
+  var n=e&&e.name||'';
+  if(n==='NotAllowedError'||n==='SecurityError'||n==='PermissionDeniedError')return 'Microphone permission was refused. On iPhone: Settings > Safari > Microphone > Allow (or tap "aA" in the address bar > Website Settings > Microphone > Allow), then reload this page.';
+  if(n==='NotFoundError'||n==='DevicesNotFoundError')return 'No microphone was found.';
+  if(n==='NotReadableError'||n==='TrackStartError')return 'The microphone is busy (another app or a call may be using it). Close other apps using it and try again.';
+  return 'Could not start the microphone: '+((e&&e.message)||n||'unknown error')+'.';
+}
+function updateButtons(){
+  $('rec').disabled=busy||R.starting;
+  $('rec').innerHTML=R.on?'&#9632;&nbsp; Stop':'&#9679;&nbsp; Record';
+  $('rec').className='big'+(R.on?' on':'');
+  $('translate').disabled=busy||R.on||!clip;
+}
 
-/* ---------- Tone analyser: sample stream -> tone on/off intervals ---------- */
-var FMIN=300,FMAX=1500,FSTEP=25;
-function Core(sr,cfg){
-  this.sr=sr;this.cfg=cfg;
-  this.W=Math.round(sr*0.02);this.H=Math.round(sr*0.005);
-  this.tail=new Float32Array(0);this.nframes=0;this.hp=[0,0];
-  this.frozenText='';this.frozenCode='';this.seg=[];
-  this.on=false;this.onStart=0;this.hi=0;this.lo=0;this.init=false;this.fEst=0;this.lastA=0;this.lastDash=0.2;this.u=0.08;
-  this.bankKey='';this.buildBank();
+/* ---------- live view while recording ---------- */
+function drawLive(){
+  var c=$('live'),w=c.width=Math.round(c.clientWidth*(window.devicePixelRatio||1))||600,h=c.height=Math.round(56*(window.devicePixelRatio||1)),g=c.getContext('2d');
+  g.fillStyle='#000';g.fillRect(0,0,w,h);var L=R.levels,bw=Math.max(2,Math.round(3*(window.devicePixelRatio||1))),n=Math.min(L.length,Math.floor(w/bw));
+  g.fillStyle='#2ecc71';
+  for(var i=0;i<n;i++){var v=L[L.length-n+i],y=Math.min(h,Math.max(1,v*h));g.fillRect(i*bw,(h-y)/2,bw-1,y);}
 }
-Core.prototype.buildBank=function(){
-  var fixed=this.cfg.freq(); var key=fixed?('f'+fixed):'auto'; if(key===this.bankKey)return; this.bankKey=key;
-  var fr=[];if(fixed){fr=[fixed];}else{for(var f=FMIN;f<=FMAX;f+=FSTEP)fr.push(f);}
-  var W=this.W,w=new Float32Array(W),sw=0,i,k;
-  for(i=0;i<W;i++){w[i]=0.5-0.5*Math.cos(2*Math.PI*i/(W-1));sw+=w[i];}
-  this.norm=2/sw;this.freqs=fr;this.C=[];this.S=[];
-  for(k=0;k<fr.length;k++){var c=new Float32Array(W),s=new Float32Array(W);
-    for(i=0;i<W;i++){var a=2*Math.PI*fr[k]*i/this.sr;c[i]=w[i]*Math.cos(a);s[i]=w[i]*Math.sin(a);}
-    this.C.push(c);this.S.push(s);}
-};
-Core.prototype.push=function(x){
-  // 1st-order DC/rumble high-pass, then append to the carry-over buffer
-  var n=x.length,y=new Float32Array(this.tail.length+n);y.set(this.tail,0);
-  var px=this.hp[0],py=this.hp[1],o=this.tail.length,i;
-  for(i=0;i<n;i++){var v=x[i];py=v-px+0.995*py;px=v;y[o+i]=py;}
-  this.hp=[px,py];
-  this.buildBank();
-  var W=this.W,H=this.H,pos=0,nf=this.freqs.length;
-  while(pos+W<=y.length){
-    var best=0,bi=0;
-    for(var k=0;k<nf;k++){var c=this.C[k],s=this.S[k],re=0,im=0;
-      for(i=0;i<W;i++){var v2=y[pos+i];re+=v2*c[i];im+=v2*s[i];}
-      var A=Math.sqrt(re*re+im*im)*this.norm; if(A>best){best=A;bi=k;} }
-    var t=(this.nframes*H+W/2)/this.sr;
-    this.frame(best,this.freqs[bi],t);
-    this.nframes++;pos+=H;
-  }
-  this.tail=y.slice(pos);
-};
-Core.prototype.frame=function(A,f,t){
-  var dt=this.H/this.sr;this.t=t;this.lastA=A;
-  if(!this.init){this.hi=A;this.lo=A;this.init=true;}
-  this.hi=Math.max(A,this.hi*Math.exp(-0.7*dt));          // fast attack, ~6 dB/s decay
-  var warm=this.nframes*dt<0.2;
-  if(warm){this.lo+=(A-this.lo)*(1-Math.exp(-30*dt));}
-  else if(!this.on){this.lo+=(A-this.lo)*(1-Math.exp(-(A<this.lo?2:(A<1.6*this.lo?1:0.1))*dt));}   // background floor: smoothed average of non-beep frames
-  var ratio=this.cfg.contrast();
-  var valid=this.hi>2e-4&&this.hi>=ratio*Math.max(this.lo,1e-7);
-  var thr=this.lo+0.5*(this.hi-this.lo);                  // half-amplitude crossing keeps beep lengths true
-  var hy=0.06*(this.hi-this.lo);
-  var sig=!warm&&valid&&(this.on?A>thr-hy:A>thr+hy);
-  if(this.on&&t-this.onStart>3){this.on=false;this.lo=A;this.hi=A;sig=false;}   // a 'beep' longer than 3 s is a steady noise, not Morse
-  if(sig){ this.fEst=this.fEst?this.fEst*0.9+f*0.1:f; }
-  if(sig&&!this.on){
-    this.on=true;this.onStart=t;
-    var s=this.seg,l=s[s.length-1];
-    if(l&&t-l[1]<0.012){this.onStart=l[0];s.pop();}       // bridge sub-12 ms dropouts
-  } else if(!sig&&this.on){
-    this.on=false; if(t-this.onStart>=0.018)this.seg.push([this.onStart,t]);
-  }
-  this.maybeFreeze(t);
-};
-Core.prototype.estimate=function(tones){
-  var wpm=this.cfg.wpm(),n=tones.length,u;
-  if(wpm){u=1.2/wpm;return {u:u,dashT:2*u};}
-  if(n===0)return {u:0.08,dashT:0.16};
-  var d=[],i;for(i=0;i<n;i++)d.push(tones[i][1]-tones[i][0]);
-  if(n===1){return d[0]<0.15?{u:d[0],dashT:0.15}:{u:Math.max(0.02,d[0]/3),dashT:0.15};}
-  var L=d.map(Math.log).sort(function(a,b){return a-b;}),P=[0],Q=[0];
-  for(i=0;i<n;i++){P.push(P[i]+L[i]);Q.push(Q[i]+L[i]*L[i]);}
-  var bk=-1,bs=1e18;
-  for(var k=1;k<n;k++){
-    var m1=P[k]/k,m2=(P[n]-P[k])/(n-k),s1=Q[k]-k*m1*m1,s2=(Q[n]-Q[k])-(n-k)*m2*m2;
-    if(s1+s2<bs){bs=s1+s2;bk=k;}
-  }
-  var g1=Math.exp(P[bk]/bk),g2=Math.exp((P[n]-P[bk])/(n-bk));
-  if(g2/g1>=1.8){u=(g1+g2/3)/2;return {u:u,dashT:Math.sqrt(g1*g2)};}
-  var med=Math.exp(P[n]/n);
-  if(med<0.15)return {u:med,dashT:2*med};
-  return {u:med/3,dashT:med*0.6};
-};
-Core.prototype.decode=function(tones,now,final){
-  var est=this.estimate(tones),u=est.u,cg=2*u,wg=5*u,txt='',code='',cur='',n=tones.length;
-  for(var i=0;i<n;i++){
-    cur+=(tones[i][1]-tones[i][0])>est.dashT?'-':'.';
-    var last=(i+1===n),gap=last?(now-tones[i][1]):(tones[i+1][0]-tones[i][1]);
-    if(!last&&gap<=cg)continue;
-    if(last&&!final&&gap<=cg){code+=cur;break;}
-    txt+=(M[cur]||'?');code+=cur+' ';cur='';
-    if(gap>wg&&!(last&&final)){txt+=' ';code+='/ ';}
-  }
-  this.u=u;this.lastDash=est.dashT;
-  return {text:txt,code:code,u:u};
-};
-Core.prototype.freeze=function(final,upto){
-  var s=this.seg,part=upto?s.slice(0,upto):s;
-  if(!part.length)return;
-  var now=upto?s[upto][0]:1e9;
-  var r=this.decode(part,final?part[part.length-1][1]+999:now,true);
-  this.frozenText+=r.text+(final?' ':'');this.frozenCode+=r.code+(final?'/ ':'');
-  this.seg=upto?s.slice(upto):[];
-};
-Core.prototype.maybeFreeze=function(t){
-  var s=this.seg;if(!s.length||this.on)return;
-  if(t-s[s.length-1][1]>4){this.freeze(true);return;}
-  if(s.length>300){var est=this.estimate(s),cut=0;
-    for(var i=240;i>0;i--){if(s[i][0]-s[i-1][1]>2*est.u){cut=i;break;}}
-    this.freeze(false,cut||240);}
-};
-Core.prototype.view=function(){
-  var r=this.decode(this.seg,this.t||0,false);
-  return {text:this.frozenText+r.text,code:this.frozenCode+r.code,u:r.u};
-};
-Core.prototype.finish=function(){
-  if(this.on){this.on=false;if(this.t-this.onStart>=0.018)this.seg.push([this.onStart,this.t]);}
-  this.freeze(false);
-  return {text:this.frozenText.replace(/\s+$/,''),code:this.frozenCode.replace(/[\s\/]+$/,'')};
-};
+function tick(){
+  var secs=R.sr?R.n/R.sr:0;$('timer').textContent=fmtT(secs);
+  var lvl=Math.min(1,R.peak*1.2);$('bar').style.width=(100*lvl).toFixed(0)+'%';$('bar').style.background=lvl>0.98?'#e74c3c':'#2ecc71';R.peak*=0.6;
+  drawLive();
+  var wall=(Date.now()-R.startT)/1000;
+  if(R.on&&!R.live&&R.n>0){R.live=true;setStatus('Microphone is live ('+R.sr+' Hz). Play the Morse beeps now, then tap Stop.','ok');}
+  if(R.on&&wall>2&&R.n===0)setStatus('Recording… but no sound is reaching the page yet. If this stays, tap Stop and try again, or record with Voice Memos and open the file below.','warn');
+  if(R.on&&secs>600){stopRec();setStatus('Stopped automatically at 10 minutes.','warn');}
+}
 
-/* ---------- UI + live microphone ---------- */
-var cfg={
-  freq:function(){return $('autof').checked?0:+$('freq').value;},
-  wpm:function(){return $('autow').checked?0:+$('wpm').value;},
-  contrast:function(){return +$('sens').value;}
-};
-var core=null,ctx=null,stream=null,proc=null,src=null,mute=null,timer=null,listening=false,starting=false,busyFile=false,lastShown='';
-var textEl=$('text'),codeEl=$('code');
-function lbl(){
-  $('fv').textContent=$('freq').value+' Hz';$('wv').textContent=$('wpm').value+' WPM';$('sv').textContent=$('sens').value+'x';
-  $('freq').disabled=$('autof').checked;$('wpm').disabled=$('autow').checked;
-}
-['autof','autow','freq','wpm','sens'].forEach(function(id){$(id).addEventListener('input',lbl);$(id).addEventListener('change',lbl);});lbl();
-function show(v){
-  var s=v.text,c=v.code;
-  if(s+'|'+c===lastShown)return;lastShown=s+'|'+c;
-  textEl.textContent=s;codeEl.textContent=c;
-}
-function updateMeter(){
-  if(!core)return;
-  var A=core.lastA,db=20*Math.log10(A+1e-9),p=Math.max(0,Math.min(100,(db+80)*1.25));
-  $('bar').style.width=p+'%';$('lvlv').textContent=db>-79?Math.round(db)+' dBFS':'(silent)';
-  $('led').style.background=core.on?'#2b7cff':'#333';
-  if(core.fEst)$('fdisp').textContent=Math.round(core.fEst)+' Hz';
-  var v=core.u?Math.round(1.2/core.u):0;$('wdisp').textContent=(v>=3&&v<=80)?('~'+v+' WPM'):'–';
-}
-function buttons(){
-  $('start').disabled=listening||starting;$('stop').disabled=!listening;
-  $('start').classList.toggle('live',listening);
-  $('start').innerHTML=listening?'&#127908; Listening&hellip;':(starting?'Starting&hellip;':'&#127908; Start listening');
-}
-function micErrorMessage(e){
-  var n=(e&&e.name)||'',m=(e&&e.message)||String(e);
-  if(n==='NotAllowedError'||n==='PermissionDeniedError'||n==='SecurityError')
-    return 'Microphone permission was denied or blocked ('+n+'). On iPhone: tap the "aA" button in Safari\'s address bar, choose Website Settings, set Microphone to Allow, then reload and tap Start again. If this page is inside an app preview or was opened from a downloaded file, open the https:// link in Safari instead. You can still use "Decode a recording" below.';
-  if(n==='NotFoundError'||n==='DevicesNotFoundError')return 'No microphone was found on this device.';
-  if(n==='NotReadableError'||n==='TrackStartError')return 'The microphone is busy or unavailable (another app may be using it). Close other apps using the mic and try again.';
-  return 'Could not start the microphone: '+n+' '+m;
-}
-function micUnavailableReason(){
-  var secure=(window.isSecureContext!==false);
-  return 'Live microphone access is not available in this viewer'+(secure?'':' because this page is not on a secure (https://) address')+'. This happens when the page is opened from a downloaded file, an in-app preview, a sandboxed frame, or an http:// address. Open the https:// version of this page directly in Safari (iPhone) or Chrome/Edge/Safari (computer). Meanwhile you can use "Decode a recording" below, which does not need the microphone.';
-}
-function safeResume(){try{if(ctx&&ctx.resume){var r=ctx.resume();if(r&&r.catch)r.catch(function(){});}}catch(e){}}
-function hasGUM(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);}
-function AC(){return window.AudioContext||window.webkitAudioContext;}
-
-function startListening(){
-  if(listening||starting||busyFile)return;
-  if(!hasGUM()){setStatus(micUnavailableReason(),'err');return;}
-  var Ctor=AC();if(!Ctor){setStatus('This browser has no Web Audio support, so it cannot analyse sound. Use a current Safari, Chrome or Edge.','err');return;}
-  starting=true;buttons();setStatus('Asking for microphone permission… tap Allow if your browser asks.','warn');
-  try{ // must be created/resumed inside the tap handler for iOS Safari
-    ctx=new Ctor();safeResume();
-  }catch(e){starting=false;buttons();setStatus('Could not start audio: '+e.message,'err');return;}
-  var prev=core?core.view():null;
-  core=new Core(ctx.sampleRate,cfg);lastShown='';
-  if(prev){core.frozenText=prev.text?(prev.text.replace(/\s*$/,' ')):'';core.frozenCode=prev.code?(prev.code+'/ '):'';}
-  var constraints={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
-  var gp=navigator.mediaDevices.getUserMedia(constraints).catch(function(e){
-    if(e&&e.name==='OverconstrainedError')return navigator.mediaDevices.getUserMedia({audio:true});
+/* ---------- record ---------- */
+function startRec(){
+  if(R.on||R.starting||busy)return;
+  if(!hasMic()){setStatus('The microphone is not available in this viewer'+(window.isSecureContext===false?' (the page is not on https)':'')+'. Open the https:// address of this page directly in Safari. You can still open a recording file below.','err');return;}
+  if(!AC){setStatus('This browser has no Web Audio support. Use a current Safari or Chrome.','err');return;}
+  stopPlay();
+  R.starting=true;updateButtons();setStatus('Starting the microphone… tap Allow if asked.','warn');
+  try{R.ctx=new AC();var p=R.ctx.resume&&R.ctx.resume();if(p&&p.catch)p.catch(function(){});}catch(e){R.starting=false;updateButtons();setStatus('Could not start audio: '+e.message,'err');return;}
+  // raw sound: turn off voice processing (echo cancellation / noise suppression / auto gain), which can erase short beeps
+  var want={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}};
+  navigator.mediaDevices.getUserMedia(want).catch(function(e){
+    if(e&&(e.name==='OverconstrainedError'||e.name==='TypeError'))return navigator.mediaDevices.getUserMedia({audio:true});
     throw e;
-  });
-  gp.then(function(s){
-    stream=s;
-    safeResume();
-    src=ctx.createMediaStreamSource(stream);
-    if(!ctx.createScriptProcessor)throw new Error('createScriptProcessor is not available');
-    proc=ctx.createScriptProcessor(4096,1,1);
-    proc.onaudioprocess=function(ev){var inp=ev.inputBuffer.getChannelData(0);core.push(new Float32Array(inp));};
-    mute=ctx.createGain();mute.gain.value=0;
-    src.connect(proc);proc.connect(mute);mute.connect(ctx.destination);
-    ctx.onstatechange=function(){if(listening&&ctx.state!=='running'){setStatus('Audio was paused by the system (state: '+ctx.state+'). Tap Stop, then Start listening again.','warn');safeResume();}};
-    listening=true;starting=false;buttons();
-    timer=setInterval(function(){if(core){show(core.view());updateMeter();}},100);
-    setStatus('Listening at '+ctx.sampleRate+' Hz. Play or send Morse beeps near the microphone.','ok');
+  }).then(function(stream){
+    R.stream=stream;R.chunks=[];R.n=0;R.levels=[];R.peak=0;R.mrChunks=[];
+    var ctx=R.ctx;var p=ctx.resume&&ctx.resume();if(p&&p.catch)p.catch(function(){});
+    R.sr=ctx.sampleRate;
+    R.src=ctx.createMediaStreamSource(stream);
+    R.proc=ctx.createScriptProcessor(4096,1,1);
+    R.proc.onaudioprocess=function(ev){
+      if(!R.on)return;var d=ev.inputBuffer.getChannelData(0),c=new Float32Array(d.length),pk=0,s=0;
+      for(var i=0;i<d.length;i++){var v=d[i];c[i]=v;var a=v<0?-v:v;if(a>pk)pk=a;s+=v*v;}
+      R.chunks.push(c);R.n+=c.length;if(pk>R.peak)R.peak=pk;
+      var rms=Math.sqrt(s/d.length);R.levels.push(Math.min(1,Math.sqrt(rms)*1.6));if(R.levels.length>4000)R.levels.splice(0,2000);
+    };
+    R.mute=ctx.createGain();R.mute.gain.value=0;
+    R.src.connect(R.proc);R.proc.connect(R.mute);R.mute.connect(ctx.destination);
+    // backup recorder in case the raw path delivers nothing on this device
+    try{if(window.MediaRecorder){R.mr=new MediaRecorder(stream);R.mrType=R.mr.mimeType||'';R.mr.ondataavailable=function(e){if(e.data&&e.data.size)R.mrChunks.push(e.data);};R.mr.start(1000);}}catch(e){R.mr=null;}
+    R.on=true;R.starting=false;R.startT=Date.now();
+    R.timer=setInterval(tick,100);updateButtons();
+    var st=stream.getAudioTracks()[0],set=st&&st.getSettings?st.getSettings():{};
+    R.live=false;setStatus('Microphone starting… wait until the timer starts counting, then play the beeps.','warn');
+    window.__morse.trackSettings=set;
   }).catch(function(e){
-    starting=false;listening=false;buttons();cleanup();
-    setStatus(micErrorMessage(e),'err');
+    R.starting=false;cleanupRec();updateButtons();setStatus(micHelp(e),'err');
   });
 }
-function cleanup(){
-  if(timer){clearInterval(timer);timer=null;}
-  try{if(proc){proc.onaudioprocess=null;proc.disconnect();}}catch(e){}
-  try{if(src)src.disconnect();}catch(e){}
-  try{if(mute)mute.disconnect();}catch(e){}
-  try{if(stream)stream.getTracks().forEach(function(t){t.stop();});}catch(e){}
-  try{if(ctx&&ctx.close)ctx.close();}catch(e){}
-  proc=src=mute=stream=null;
+function cleanupRec(){
+  if(R.timer){clearInterval(R.timer);R.timer=null;}
+  try{if(R.proc){R.proc.onaudioprocess=null;R.proc.disconnect();}}catch(e){}
+  try{if(R.src)R.src.disconnect();}catch(e){}
+  try{if(R.mute)R.mute.disconnect();}catch(e){}
+  try{if(R.stream)R.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}
+  try{if(R.ctx&&R.ctx.close)R.ctx.close();}catch(e){}
+  R.proc=R.src=R.mute=R.stream=R.ctx=null;
 }
-function stopListening(){
-  if(!listening)return;
-  listening=false;
-  var c=core;cleanup();
-  if(c){var r=c.finish();show({text:r.text,code:r.code});c.on=false;updateMeter();}
-  $('led').style.background='#333';buttons();
-  setStatus('Stopped. The microphone is off. Tap Start listening to continue, or Clear to erase the text.','');
+function stopRec(){
+  if(!R.on)return;R.on=false;
+  var mr=R.mr;R.mr=null;
+  var chunks=R.chunks,n=R.n,sr=R.sr;
+  function finish(){
+    cleanupRec();$('bar').style.width='0';
+    var x=new Float32Array(n),o=0;chunks.forEach(function(c){x.set(c,o);o+=c.length;});
+    var pk=0;for(var i=0;i<x.length;i++){var a=x[i]<0?-x[i]:x[i];if(a>pk)pk=a;}
+    if(n<sr*0.2||pk===0){
+      if(R.mrChunks.length){
+        setStatus('The raw recording came back empty, so the backup recording is being used…','warn');
+        var blob=new Blob(R.mrChunks,{type:R.mrType||'audio/mp4'});
+        blob.arrayBuffer?blob.arrayBuffer().then(function(ab){loadBuffer(ab,'recording (backup)');}):readBlob(blob,function(ab){loadBuffer(ab,'recording (backup)');});
+        updateButtons();return;
+      }
+      updateButtons();setStatus('Nothing was recorded'+(n?' (the microphone sent only silence)':'')+'. Check that Safari has microphone permission and try again.','err');return;
+    }
+    setClip(x,sr,'Recording');
+    setStatus('Recorded '+fmtT(x.length/sr)+'. Check the picture shows the beeps, then tap Translate.'+(pk>0.99?' (Some of it was very loud and clipped; that is usually OK.)':(pk<0.01?' The recording is very quiet; move closer or turn the volume up.':'')),pk<0.01?'warn':'ok');
+  }
+  if(mr&&mr.state!=='inactive'){var done=false;mr.onstop=function(){if(!done){done=true;finish();}};try{mr.stop();}catch(e){done=true;finish();}setTimeout(function(){if(!done){done=true;finish();}},1500);}
+  else finish();
+  updateButtons();
 }
-function clearAll(){
-  if(core){core.frozenText='';core.frozenCode='';core.seg=[];}
-  lastShown='';textEl.textContent='';codeEl.textContent='';
-  setStatus(listening?'Cleared. Still listening…':'Cleared.',listening?'ok':'');
-}
-$('start').addEventListener('click',startListening);
-$('stop').addEventListener('click',stopListening);
-$('clear').addEventListener('click',clearAll);
+function readBlob(blob,cb){var fr=new FileReader();fr.onload=function(){cb(fr.result);};fr.readAsArrayBuffer(blob);}
 
-/* ---------- Decode a recorded file (no microphone needed) ---------- */
-function parseWav(ab){   // plain RIFF/WAVE reader: works even if the browser's decodeAudioData is missing or stalls
+/* ---------- playback (audio element made only when asked for) ---------- */
+var player=null;
+function stopPlay(){try{if(player){player.pause();}}catch(e){}$('play').innerHTML='&#9654;&nbsp; Play recording';}
+$('play').addEventListener('click',function(){
+  if(!wavURL)return;
+  if(player&&!player.paused){stopPlay();return;}
+  try{
+    if(!player){player=new Audio();player.src=wavURL;player.onended=stopPlay;}
+    var pr=player.play();$('play').innerHTML='&#9632;&nbsp; Stop playback';
+    if(pr&&pr.catch)pr.catch(function(e){stopPlay();setStatus('Playback was blocked: '+(e&&e.message||e)+'. You can still Translate.','warn');});
+  }catch(e){setStatus('Playback is not available here. You can still Translate.','warn');}
+});
+
+/* ---------- clip display ---------- */
+function wavBlob(x,sr){
+  var n=x.length,b=new ArrayBuffer(44+2*n),v=new DataView(b);
+  function S(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}
+  S(0,'RIFF');v.setUint32(4,36+2*n,true);S(8,'WAVE');S(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,2*sr,true);v.setUint16(32,2,true);v.setUint16(34,16,true);S(36,'data');v.setUint32(40,2*n,true);
+  for(var i=0;i<n;i++){var s=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+2*i,s<0?s*32768:s*32767,true);}
+  return new Blob([b],{type:'audio/wav'});
+}
+function setClip(x,sr,name){
+  clip={x:x,sr:sr,name:name};
+  $('clipbox').hidden=false;$('resbox').hidden=true;
+  $('clipinfo').textContent=name+': '+fmtT(x.length/sr)+' ('+sr+' Hz)';
+  if(wavURL){try{URL.revokeObjectURL(wavURL);}catch(e){}}
+  stopPlay();player=null;try{wavURL=URL.createObjectURL(wavBlob(x,sr));$('dl').href=wavURL;$('dl').hidden=false;$('play').disabled=false;}catch(e){$('dl').hidden=true;$('play').disabled=true;}
+  drawWave();updateButtons();
+}
+function drawWave(){
+  if(!clip)return;var c=$('wave'),dpr=window.devicePixelRatio||1,w=c.width=Math.round((c.clientWidth||600)*dpr),h=c.height=Math.round(90*dpr),g=c.getContext('2d'),x=clip.x;
+  g.fillStyle='#000';g.fillRect(0,0,w,h);var per=x.length/w,mx=0,cols=new Float32Array(w),i,j;
+  for(i=0;i<w;i++){var a=0,s=Math.floor(i*per),e=Math.min(x.length,Math.floor((i+1)*per));for(j=s;j<e;j++){var v=x[j]<0?-x[j]:x[j];if(v>a)a=v;}cols[i]=a;if(a>mx)mx=a;}
+  g.fillStyle='#4aa3ff';var sc=mx>0?(h/2-2)/mx:0;
+  for(i=0;i<w;i++){var y=Math.max(1,cols[i]*sc);g.fillRect(i,h/2-y,1,2*y);}
+}
+
+/* ---------- open a file ---------- */
+function parseWav(ab){
   var dv=new DataView(ab);if(ab.byteLength<44||dv.getUint32(0,false)!==0x52494646||dv.getUint32(8,false)!==0x57415645)return null;
   var pos=12,fmt=null,dataPos=-1,dataLen=0;
   while(pos+8<=ab.byteLength){
     var id=dv.getUint32(pos,false),len=dv.getUint32(pos+4,true);
-    if(id===0x666d7420){fmt={tag:dv.getUint16(pos+8,true),ch:dv.getUint16(pos+10,true),sr:dv.getUint32(pos+12,true),bits:dv.getUint16(pos+22,true)};
-      if(fmt.tag===0xFFFE&&len>=26)fmt.tag=dv.getUint16(pos+32,true);}
+    if(id===0x666d7420){fmt={tag:dv.getUint16(pos+8,true),ch:dv.getUint16(pos+10,true),sr:dv.getUint32(pos+12,true),bits:dv.getUint16(pos+22,true)};if(fmt.tag===0xFFFE&&len>=26)fmt.tag=dv.getUint16(pos+32,true);}
     else if(id===0x64617461){dataPos=pos+8;dataLen=Math.min(len,ab.byteLength-dataPos);break;}
     pos+=8+len+(len&1);
   }
@@ -321,79 +651,119 @@ function parseWav(ab){   // plain RIFF/WAVE reader: works even if the browser's 
   if(!((fmt.tag===1&&(bps===1||bps===2||bps===3||bps===4))||(fmt.tag===3&&bps===4)))return null;
   for(i=0;i<frames;i++){var acc=0;
     for(c=0;c<fmt.ch;c++){var o=dataPos+(i*fmt.ch+c)*bps,v;
-      if(fmt.tag===3)v=dv.getFloat32(o,true);
-      else if(bps===1)v=(dv.getUint8(o)-128)/128;
-      else if(bps===2)v=dv.getInt16(o,true)/32768;
-      else if(bps===3){var t=dv.getUint8(o)|(dv.getUint8(o+1)<<8)|(dv.getUint8(o+2)<<16);if(t&0x800000)t-=0x1000000;v=t/8388608;}
-      else v=dv.getInt32(o,true)/2147483648;
+      if(fmt.tag===3)v=dv.getFloat32(o,true);else if(bps===1)v=(dv.getUint8(o)-128)/128;else if(bps===2)v=dv.getInt16(o,true)/32768;
+      else if(bps===3){var t=dv.getUint8(o)|(dv.getUint8(o+1)<<8)|(dv.getUint8(o+2)<<16);if(t&0x800000)t-=0x1000000;v=t/8388608;}else v=dv.getInt32(o,true)/2147483648;
       acc+=v;}
     x[i]=acc/fmt.ch;}
-  return {x:x,sr:fmt.sr,how:'built-in WAV reader'};
+  return {x:x,sr:fmt.sr};
 }
-function decodeBuffer(ab){
+function decodeAudio(ab){
   var w=null;try{w=parseWav(ab);}catch(e){w=null;}
   if(w)return Promise.resolve(w);
   return new Promise(function(resolve,reject){
     var O=window.OfflineAudioContext||window.webkitOfflineAudioContext,c;
-    try{c=O?new O(1,1,44100):new (AC())();}catch(e){try{c=new (AC())();}catch(e2){reject(e2);return;}}
-    var done=false,tm=setTimeout(function(){bad(new Error('this browser did not finish decoding the file (it may not support this format)'));},45000);
-    function ok(b){if(!done){done=true;clearTimeout(tm);resolve({x:monoOf(b),sr:b.sampleRate,how:'browser audio decoder'});}}
-    function bad(e){if(!done){done=true;clearTimeout(tm);reject(e||new Error('This file could not be decoded'));}}
-    try{var p=c.decodeAudioData(ab,ok,bad);if(p&&p.then)p.then(ok,bad);}catch(e){bad(e);}   // callback form for older Safari, promise form for new ones
+    try{c=O?new O(1,1,48000):new AC();}catch(e){try{c=new AC();}catch(e2){reject(e2);return;}}
+    var done=false,tm=setTimeout(function(){bad(new Error('the browser did not finish reading this file'));},60000);
+    function ok(b){if(done)return;done=true;clearTimeout(tm);var n=b.length,x=new Float32Array(n),ch=b.numberOfChannels;for(var k=0;k<ch;k++){var d=b.getChannelData(k);for(var i=0;i<n;i++)x[i]+=d[i]/ch;}resolve({x:x,sr:b.sampleRate});}
+    function bad(e){if(done)return;done=true;clearTimeout(tm);reject(e||new Error('unsupported or damaged audio'));}
+    try{var p=c.decodeAudioData(ab,ok,bad);if(p&&p.then)p.then(ok,bad);}catch(e){bad(e);}
   });
 }
-function monoOf(buf){
-  var n=buf.length,ch=buf.numberOfChannels,out=new Float32Array(n),c,i;
-  for(c=0;c<ch;c++){var d=buf.getChannelData(c);for(i=0;i<n;i++)out[i]+=d[i]/ch;}
-  return out;
+function loadBuffer(ab,name){
+  busy=true;updateButtons();setStatus('Reading '+name+'…','warn');
+  decodeAudio(ab).then(function(r){
+    busy=false;
+    if(!r.x.length){setStatus(name+' contains no audio.','err');updateButtons();return;}
+    setClip(r.x,r.sr,name);setStatus('Loaded '+name+' ('+fmtT(r.x.length/r.sr)+'). Tap Translate.','ok');
+  }).catch(function(e){busy=false;updateButtons();setStatus('Could not read '+name+': '+((e&&e.message)||'unsupported or damaged audio')+'. Try .m4a, .mp3 or .wav.','err');});
 }
-function readFile(f){
-  return new Promise(function(res,rej){
-    if(f.arrayBuffer){f.arrayBuffer().then(res,rej);return;}
-    var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){rej(r.error||new Error('Could not read the file'));};r.readAsArrayBuffer(f);
-  });
-}
-function handleFile(f){
-  if(!f)return;
-  if(busyFile)return;
-  if(listening){setStatus('Tap Stop first, then choose a file.','warn');return;}
-  busyFile=true;$('start').disabled=true;var how='';
-  var prog=$('prog');prog.style.display='block';prog.value=0;
-  setStatus('Reading "'+f.name+'" ('+Math.round(f.size/1024)+' KB)…','warn');
-  readFile(f).then(function(ab){
-    setStatus('Decoding audio from "'+f.name+'"…','warn');
-    return decodeBuffer(ab);
-  }).then(function(dec){
-    var x=dec.x,sr=dec.sr;if(!x||!x.length)throw new Error('the file contains no audio');
-    var k=new Core(sr,cfg),CH=sr*2,pos=0;how=dec.how;
-    core=k;lastShown='';
-    return new Promise(function(resolve){
-      (function step(){
-        var end=Math.min(x.length,pos+CH);k.push(x.subarray(pos,end));pos=end;prog.value=100*pos/x.length;
-        if(pos<x.length){setTimeout(step,0);}
-        else{k.push(new Float32Array(Math.round(sr*3)));resolve({k:k,dur:x.length/sr,sr:sr});}   // 3 s of silence so the last letter is closed
-      })();
-    });
-  }).then(function(r){
-    var out=r.k.finish();show({text:out.text,code:out.code});updateMeter();
-    $('led').style.background='#333';
-    if(!out.text)setStatus('Finished "'+f.name+'" ('+r.dur.toFixed(1)+' s) but no Morse beeps were found. Try lowering "Noise rejection" in Settings.','warn');
-    else setStatus('Decoded "'+f.name+'" ('+r.dur.toFixed(1)+' s at '+r.sr+' Hz, via '+how+').','ok');
-  }).catch(function(e){
-    setStatus('Could not decode "'+f.name+'": '+((e&&e.message)||'unsupported or damaged audio')+'. Try a .m4a, .wav or .mp3 recording.','err');
-  }).then(function(){busyFile=false;prog.style.display='none';buttons();$('file').value='';});
-}
-$('file').addEventListener('change',function(ev){handleFile(ev.target.files&&ev.target.files[0]);});
+$('file').addEventListener('change',function(ev){
+  var f=ev.target.files&&ev.target.files[0];if(!f)return;if(R.on)stopRec();
+  var name='"'+f.name+'"';
+  (f.arrayBuffer?f.arrayBuffer():new Promise(function(res){readBlob(f,res);})).then(function(ab){loadBuffer(ab,name);$('file').value='';});
+});
 
-/* ---------- startup self-check ---------- */
-buttons();
-window.__morse={get listening(){return listening;},get ctxState(){return ctx?ctx.state:'none';},get tracksLive(){return !!(stream&&stream.getTracks().some(function(t){return t.readyState==='live';}));}};
-var env=$('envnote');
-if(!hasGUM()){
-  env.style.display='block';env.textContent=micUnavailableReason();
-  setStatus('Ready for recordings. Live microphone is not available here (see the note above).','warn');
-}else{
-  setStatus('Ready. Tap "Start listening" and allow the microphone when asked.','ok');
+/* ---------- translate ---------- */
+var COLORS=['#2ecc71','#ff9f43','#54a0ff','#ff6b81','#feca57','#a29bfe'];
+function translate(){
+  if(!clip||busy)return;busy=true;updateButtons();
+  setStatus('Translating… (long recordings can take a few seconds)','warn');
+  setTimeout(function(){
+    var res;
+    try{res=MorseCore.analyze(clip.x,clip.sr);}catch(e){busy=false;updateButtons();setStatus('Translation failed: '+e.message,'err');return;}
+    busy=false;window.__morse.last=res;showResult(res);updateButtons();
+  },60);
 }
+function showResult(res){
+  $('resbox').hidden=false;
+  var t=$('text');t.textContent=res.text||'';
+  $('code').textContent=res.code||'';
+  var segs=$('segs');segs.innerHTML='';
+  res.segments.forEach(function(s,i){
+    var d=document.createElement('div');d.className='seg';
+    var sp=s.wpmMin!==s.wpmMax&&Math.abs(s.wpmMax-s.wpmMin)>2?(' (varied '+s.wpmMin+'–'+s.wpmMax+')'):'';
+    d.innerHTML='<span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><b>'+(res.segments.length>1?'Part '+(i+1)+': ':'')+'</b>'+
+      'pitch <b>'+s.hz+' Hz</b> · speed <b>'+s.wpm+' WPM</b>'+sp+' · '+fmtT(s.t0)+'–'+fmtT(s.t1)+
+      ' · confidence <b class="conf-'+s.confidence+'">'+s.confidence+'</b>'+
+      (res.segments.length>1?'<br><span style="font-family:ui-monospace,Menlo,monospace">'+esc(s.text)+'</span>':'');
+    segs.appendChild(d);
+  });
+  (res.ignored||[]).forEach(function(s){var d=document.createElement('div');d.className='seg';d.innerHTML='<span class="hint">Ignored a sound at '+s.hz+' Hz ('+fmtT(s.t0)+'–'+fmtT(s.t1)+') because its rhythm doesn\'t look like Morse code.</span>';segs.appendChild(d);});
+  var low=res.segments.some(function(s){return s.confidence!=='high';});
+  if(!res.text)setStatus('No Morse code was found in this recording. Make sure the beeps are clearly audible on the recording (play it back above), get closer to the speaker, and try again.','warn');
+  else if(low)setStatus('Translated, but some of it has '+(res.segments.some(function(s){return s.confidence==='low';})?'LOW':'medium')+' confidence: the beep timing was unclear (noise, echo or uneven sending). Treat it with care.','warn');
+  else setStatus('Translated. Confidence high: the beep timing matched Morse code cleanly.','ok');
+  drawSpec(res);
+  var det={duration_s:+res.duration.toFixed(2),sample_rate:res.sr,analysis_ms:res.ms,tones_found_hz:res.clusters.map(function(c){return c.hz;}),
+    parts:res.segments.map(function(s){return {hz:s.hz,wpm:s.wpm,wpm_range:[s.wpmMin,s.wpmMax],start_s:+s.t0.toFixed(2),end_s:+s.t1.toFixed(2),beeps:s.nMarks,fit_score:s.score,filter_ms:s.W*1000,text:s.text,code:s.code};})};
+  $('details').textContent=JSON.stringify(det,null,1);
+  try{$('resbox').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function drawSpec(res){
+  var S=res.spec,c=$('spec'),dpr=window.devicePixelRatio||1,w=c.width=Math.round((c.clientWidth||600)*dpr),h=c.height=Math.round(210*dpr),g=c.getContext('2d');
+  var barH=Math.round(14*dpr),ph=h-barH*Math.max(1,res.segments.length)-4*dpr;
+  var img=g.createImageData(w,h),D=img.data,fmin=150,fmax=Math.min(4000,0.45*S.sr),lf0=Math.log(fmin),lf1=Math.log(fmax);
+  for(var i=0;i<D.length;i+=4){D[i]=0;D[i+1]=0;D[i+2]=0;D[i+3]=255;}
+  var rowBin=new Int32Array(ph);for(var y=0;y<ph;y++){var f=Math.exp(lf1-(lf1-lf0)*y/(ph-1));rowBin[y]=Math.max(0,Math.min(S.nb-1,Math.round(f/S.binHz)-S.b0));}
+  var fpp=S.frames/w,gmax=1e-9;for(var q=0;q<S.mags.length;q++)if(S.mags[q]>gmax)gmax=S.mags[q];
+  for(var x=0;x<w;x++){
+    var f0=Math.floor(x*fpp),f1=Math.max(f0+1,Math.min(S.frames,Math.floor((x+1)*fpp)));
+    for(y=0;y<ph;y++){
+      var b=rowBin[y],m=0;for(var fr=f0;fr<f1;fr++){var v=S.mags[fr*S.nb+b];if(v>m)m=v;}
+      var db=20*Math.log(m/gmax+1e-12)/Math.LN10,t=Math.max(0,Math.min(1,(db+50)/50));
+      var o=4*(y*w+x);D[o]=Math.round(255*Math.min(1,Math.max(0,3*t-1.2)));D[o+1]=Math.round(255*Math.min(1,Math.max(0,2.2*t-0.5)));D[o+2]=Math.round(255*Math.min(1,t*2.5)*(t<0.7?1:1-(t-0.7)));
+    }
+  }
+  g.putImageData(img,0,0);
+  var dur=res.duration;
+  res.segments.forEach(function(s,i){
+    var col=COLORS[i%COLORS.length],yy=Math.round((lf1-Math.log(Math.max(fmin,Math.min(fmax,s.hz))))/(lf1-lf0)*(ph-1));
+    g.strokeStyle=col;g.lineWidth=dpr;g.setLineDash([4*dpr,4*dpr]);g.beginPath();g.moveTo(s.t0/dur*w,yy);g.lineTo(s.t1/dur*w,yy);g.stroke();g.setLineDash([]);
+    g.fillStyle=col;var by=ph+4*dpr+i*barH;
+    s.marks.forEach(function(m){var a=m[0]/dur*w,b2=m[1]/dur*w;g.fillRect(a,by,Math.max(1,b2-a),barH-3*dpr);});
+    g.font=(11*dpr)+'px -apple-system,sans-serif';g.fillText(s.hz+' Hz',Math.min(w-60*dpr,s.t0/dur*w+3),Math.max(12*dpr,yy-4*dpr));
+  });
+  g.fillStyle='#bbb';g.font=(10*dpr)+'px -apple-system,sans-serif';
+  [200,500,1000,2000,3000].forEach(function(f){if(f<fmin||f>fmax)return;var yy=Math.round((lf1-Math.log(f))/(lf1-lf0)*(ph-1));g.fillText(f>=1000?(f/1000)+'k':String(f),2,Math.max(10*dpr,yy));});
+}
+
+/* ---------- buttons ---------- */
+$('rec').addEventListener('click',function(){if(R.on)stopRec();else startRec();});
+$('translate').addEventListener('click',translate);
+$('again').addEventListener('click',function(){$('resbox').hidden=true;window.scrollTo(0,0);startRec();});
+$('copy').addEventListener('click',function(){
+  var s=$('text').textContent;if(!s)return;
+  function done(){setStatus('Copied: '+s,'ok');}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(done,fallback);}else fallback();
+  function fallback(){var ta=document.createElement('textarea');ta.value=s;ta.setAttribute('readonly','');ta.style.position='absolute';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,s.length);var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);if(ok)done();else setStatus('Copy is blocked here; press and hold the text to copy it.','warn');}
+});
+window.addEventListener('resize',function(){drawWave();if(window.__morse.last)drawSpec(window.__morse.last);});
+window.__morse={get playing(){return !!(player&&!player.paused);},get playTime(){return player?player.currentTime:0;},get recording(){return R.on;},get samples(){return R.n;},get clip(){return clip?{n:clip.x.length,sr:clip.sr,name:clip.name}:null;},last:null,trackSettings:null,clipWav:function(){return clip?wavURL:null;}};
+updateButtons();drawLive();
+if(typeof MorseCore==='undefined')setStatus('The decoder failed to load. Reload the page.','err');
+else if(!hasMic())setStatus('Microphone recording is not available in this viewer'+(window.isSecureContext===false?' (not https)':'')+'. Open the https:// page in Safari, or open a recording file below.','warn');
+else setStatus('Ready. Tap Record, play the beeps, tap Stop, then Translate.','ok');
 })();
-</script></body></html>
+</script>
+</body></html>
